@@ -1010,12 +1010,16 @@ static int run_init_process(const char *init_filename)
 {
 	#ifdef CONFIG_UNIKERNEL_LINUX
  
-        printk("No. %d In run_init_process\n",1);
+    printk("No. %d In run_init_process\n",1);
+
+    kthread_run((void*)interface, NULL, "Interface and Kmain \n");
+
+
+	while(1){
+      cond_resched();
+        }
  
-        interface();
-         kmain();
- 
-        #else
+    #else
         
 	argv_init[0] = init_filename;
 	pr_info("Run %s as init process\n", init_filename);
