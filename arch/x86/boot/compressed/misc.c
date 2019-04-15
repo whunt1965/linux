@@ -299,6 +299,7 @@ static void parse_elf(void *output)
 		phdr = &phdrs[i];
 
 		switch (phdr->p_type) {
+		case PT_TLS:
 		case PT_LOAD:
 #ifdef CONFIG_X86_64
 			if ((phdr->p_align % 0x200000) != 0)

@@ -50,9 +50,10 @@ modpost_link()
 		--no-whole-archive				\
 		--start-group					\
 		${KBUILD_VMLINUX_LIBS}				\
+		../ukl/UKL.a 				\
 		--end-group"
 
-	${LD} ${KBUILD_LDFLAGS} -r -o ${1} ${objects}
+	${LD} ${KBUILD_LDFLAGS} --unresolved-symbols=ignore-all --allow-multiple-definition -r -o ${1} ${objects}
 }
 
 # Link of vmlinux
@@ -69,10 +70,11 @@ vmlinux_link()
 			--no-whole-archive			\
 			--start-group				\
 			${KBUILD_VMLINUX_LIBS}			\
+			../ukl/UKL.a				\
 			--end-group				\
 			${1}"
 
-		${LD} ${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux} -o ${2}	\
+		${LD} --unresolved-symbols=ignore-all --allow-multiple-definition ${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux} -o ${2}	\
 			-T ${lds} ${objects}
 	else
 		objects="-Wl,--whole-archive			\

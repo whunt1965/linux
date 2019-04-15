@@ -2095,7 +2095,7 @@ config PHYSICAL_START
 
 config RELOCATABLE
 	bool "Build a relocatable kernel"
-	default y
+	default n
 	---help---
 	  This builds a kernel image that retains relocation information
 	  so it can be loaded someplace besides the default 1MB.
@@ -2113,7 +2113,7 @@ config RELOCATABLE
 config RANDOMIZE_BASE
 	bool "Randomize the address of the kernel image (KASLR)"
 	depends on RELOCATABLE
-	default y
+	default n
 	---help---
 	  In support of Kernel Address Space Layout Randomization (KASLR),
 	  this randomizes the physical address at which the kernel image
@@ -2147,7 +2147,7 @@ config RANDOMIZE_BASE
 
 # Relocation on x86 needs some additional build support
 config X86_NEED_RELOCS
-	def_bool y
+	def_bool n
 	depends on RANDOMIZE_BASE || (X86_32 && RELOCATABLE)
 
 config PHYSICAL_ALIGN

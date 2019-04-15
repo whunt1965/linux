@@ -363,6 +363,8 @@ extern void put_cmsg_scm_timestamping(struct msghdr *msg, struct scm_timestampin
 /* The __sys_...msg variants allow MSG_CMSG_COMPAT iff
  * forbid_cmsg_compat==false
  */
+extern int __sys_setsockopt(int fd, int level, int optname,
+			    char __user *optval, int optlen);
 extern long __sys_recvmsg(int fd, struct user_msghdr __user *msg,
 			  unsigned int flags, bool forbid_cmsg_compat);
 extern long __sys_sendmsg(int fd, struct user_msghdr __user *msg,

@@ -28,3 +28,8 @@
  * but have an entry in the table for future expansion..
  */
 #endif
+
+void rlim64_to_rlim(const struct rlimit64 *rlim64, struct rlimit *rlim);
+void rlim_to_rlim64(const struct rlimit *rlim, struct rlimit64 *rlim64);
+int check_prlimit_permission(struct task_struct *task, unsigned int flags);
+

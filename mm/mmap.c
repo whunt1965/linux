@@ -186,9 +186,14 @@ static struct vm_area_struct *remove_vma(struct vm_area_struct *vma)
 	return next;
 }
 
+SYSCALL_DEFINE1(brk, unsigned long, brk)
+{
+       return mybrk(brk);
+}
+
 static int do_brk_flags(unsigned long addr, unsigned long request, unsigned long flags,
 		struct list_head *uf);
-SYSCALL_DEFINE1(brk, unsigned long, brk)
+unsigned long mybrk(unsigned long brk)
 {
 	unsigned long retval;
 	unsigned long newbrk, oldbrk, origbrk;

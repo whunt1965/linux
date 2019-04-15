@@ -1410,6 +1410,7 @@ struct mm_walk {
 
 struct mmu_notifier_range;
 
+unsigned long mybrk(unsigned long brk);
 int walk_page_range(unsigned long addr, unsigned long end,
 		struct mm_walk *walk);
 int walk_page_vma(struct vm_area_struct *vma, struct mm_walk *walk);
@@ -1608,6 +1609,8 @@ extern unsigned long change_protection(struct vm_area_struct *vma, unsigned long
 extern int mprotect_fixup(struct vm_area_struct *vma,
 			  struct vm_area_struct **pprev, unsigned long start,
 			  unsigned long end, unsigned long newflags);
+
+int do_mprotect_pkey(unsigned long start, size_t len, unsigned long prot, int pkey);
 
 /*
  * doesn't attempt to fault and will return short.

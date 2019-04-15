@@ -1499,7 +1499,7 @@ static inline bool rlim64_is_infinity(__u64 rlim64)
 #endif
 }
 
-static void rlim_to_rlim64(const struct rlimit *rlim, struct rlimit64 *rlim64)
+void rlim_to_rlim64(const struct rlimit *rlim, struct rlimit64 *rlim64)
 {
 	if (rlim->rlim_cur == RLIM_INFINITY)
 		rlim64->rlim_cur = RLIM64_INFINITY;
@@ -1511,7 +1511,7 @@ static void rlim_to_rlim64(const struct rlimit *rlim, struct rlimit64 *rlim64)
 		rlim64->rlim_max = rlim->rlim_max;
 }
 
-static void rlim64_to_rlim(const struct rlimit64 *rlim64, struct rlimit *rlim)
+void rlim64_to_rlim(const struct rlimit64 *rlim64, struct rlimit *rlim)
 {
 	if (rlim64_is_infinity(rlim64->rlim_cur))
 		rlim->rlim_cur = RLIM_INFINITY;
@@ -1591,7 +1591,7 @@ out:
 }
 
 /* rcu lock must be held */
-static int check_prlimit_permission(struct task_struct *task,
+int check_prlimit_permission(struct task_struct *task,
 				    unsigned int flags)
 {
 	const struct cred *cred = current_cred(), *tcred;

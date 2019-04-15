@@ -99,6 +99,8 @@
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
 
+#include <linux/kmain.h>
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/initcall.h>
 
@@ -1006,11 +1008,22 @@ static void __init do_pre_smp_initcalls(void)
 
 static int run_init_process(const char *init_filename)
 {
+	#ifdef CONFIG_UNIKERNEL_LINUX
+ 
+        printk("No. %d In run_init_process\n",1);
+ 
+        interface();
+         kmain();
+ 
+        #else
+        
 	argv_init[0] = init_filename;
 	pr_info("Run %s as init process\n", init_filename);
 	return do_execve(getname_kernel(init_filename),
 		(const char __user *const __user *)argv_init,
 		(const char __user *const __user *)envp_init);
+	
+	#endif
 }
 
 static int try_to_run_init_process(const char *init_filename)
@@ -1041,18 +1054,18 @@ __setup("rodata=", set_debug_rodata);
 #ifdef CONFIG_STRICT_KERNEL_RWX
 static void mark_readonly(void)
 {
-	if (rodata_enabled) {
+	// if (rodata_enabled) {
 		/*
 		 * load_module() results in W+X mappings, which are cleaned
 		 * up with call_rcu().  Let's make sure that queued work is
 		 * flushed so that we don't hit false positives looking for
 		 * insecure pages which are W+X.
 		 */
-		rcu_barrier();
-		mark_rodata_ro();
-		rodata_test();
-	} else
-		pr_info("Kernel memory protection disabled.\n");
+	//	rcu_barrier();
+	//	mark_rodata_ro();
+	//	rodata_test();
+	// } else
+	//	pr_info("Kernel memory protection disabled.\n");
 }
 #else
 static inline void mark_readonly(void)

@@ -49,3 +49,5 @@ struct kstat {
 };
 
 #endif
+
+int cp_new_stat(struct kstat *stat, struct stat __user *statbuf);

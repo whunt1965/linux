@@ -747,8 +747,8 @@ long do_arch_prctl_64(struct task_struct *task, int option, unsigned long arg2)
 		 * Not strictly needed for %fs, but do it for symmetry
 		 * with %gs
 		 */
-		if (unlikely(arg2 >= TASK_SIZE_MAX))
-			return -EPERM;
+		// if (unlikely(arg2 >= TASK_SIZE_MAX))
+		//	return -EPERM;
 
 		preempt_disable();
 		/*

@@ -2022,7 +2022,7 @@ SYSCALL_DEFINE4(recv, int, fd, void __user *, ubuf, size_t, size,
  *	to pass the user mode parameter for the protocols to sort out.
  */
 
-static int __sys_setsockopt(int fd, int level, int optname,
+int __sys_setsockopt(int fd, int level, int optname,
 			    char __user *optval, int optlen)
 {
 	int err, fput_needed;

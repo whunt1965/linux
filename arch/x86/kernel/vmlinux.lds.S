@@ -97,6 +97,7 @@ jiffies_64 = jiffies;
 
 PHDRS {
 	text PT_LOAD FLAGS(5);          /* R_E */
+	tls PT_TLS FLAGS(7);            /* RWE */
 	data PT_LOAD FLAGS(6);          /* RW_ */
 #ifdef CONFIG_X86_64
 #ifdef CONFIG_SMP
@@ -155,6 +156,19 @@ SECTIONS
 	X86_ALIGN_RODATA_BEGIN
 	RO_DATA(PAGE_SIZE)
 	X86_ALIGN_RODATA_END
+
+	/* Thread Local Storage sections */ 
+        /* . = ALIGN(PAGE_SIZE); */ 
+        .tdata : ALIGN(0x200000){
+                __tls_start = .;
+                *(.tdata .tdata.* .gnu.linkonce.td.*) 
+        /* } :tls  */   
+        /* . = ALIGN(PAGE_SIZE); */ 
+        /* .tbss : { */ 
+                *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) 
+                . = __tls_start + 0x200000;  
+                __tls_end = .;
+        } :tls 
 
 	/* Data */
 	.data : AT(ADDR(.data) - LOAD_OFFSET) {
@@ -385,7 +399,7 @@ SECTIONS
 	/* Sections to be discarded */
 	DISCARDS
 	/DISCARD/ : {
-		*(.eh_frame)
+		*(.eh_frame .gnu.glibc-stub.*)
 	}
 }
 
