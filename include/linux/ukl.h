@@ -71,6 +71,8 @@
 #include <linux/sys.h>
 #include <linux/futex.h>
 
+#include <linux/sched/mm.h>
+
 ssize_t ukl_write(int fds, const void* buf, size_t count);
 
 ssize_t ukl_read(int fd, const void* buf, size_t count);
