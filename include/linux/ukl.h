@@ -70,6 +70,7 @@
 #include <linux/mman.h>
 #include <linux/sys.h>
 #include <linux/futex.h>
+#include <linux/sched/mm.h>
 
 ssize_t ukl_write(int fds, const void* buf, size_t count);
 
