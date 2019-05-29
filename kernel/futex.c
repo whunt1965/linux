@@ -3367,8 +3367,12 @@ out:
  * @head:	pointer to the list-head
  * @len:	length of the list-head, as userspace expects
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_set_robust_list(struct robust_list_head * head, size_t len)
+#else
 SYSCALL_DEFINE2(set_robust_list, struct robust_list_head __user *, head,
 		size_t, len)
+#endif
 {
 	if (!futex_cmpxchg_enabled)
 		return -ENOSYS;

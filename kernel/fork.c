@@ -1595,7 +1595,11 @@ static void copy_seccomp(struct task_struct *p)
 #endif
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_set_tid_address(int * tidptr)
+#else
 SYSCALL_DEFINE1(set_tid_address, int __user *, tidptr)
+#endif
 {
 	current->clear_child_tid = tidptr;
 
