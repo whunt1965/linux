@@ -8,7 +8,7 @@
  *   Copyright (C) 2007-2009  Sam Ravnborg <sam@ravnborg.org>
  *
  *
- * Don't define absolute symbols until and unless you know that symbol
+ * Dont define absolute symbols until and unless you know that symbol
  * value is should remain constant even if kernel image is relocated
  * at run time. Absolute symbols are not relocated. If symbol value should
  * change if kernel is relocated, make the symbol section relative and
@@ -379,8 +379,8 @@ SECTIONS
 		*(.bss)
 		BSS_DECRYPTED
 		. = ALIGN(PAGE_SIZE);
-		__bss_stop = .;
 	}
+	__bss_stop = .;
 
 	. = ALIGN(PAGE_SIZE);
 	.brk : AT(ADDR(.brk) - LOAD_OFFSET) {
