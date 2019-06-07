@@ -944,7 +944,11 @@ void complete_and_exit(struct completion *comp, long code)
 }
 EXPORT_SYMBOL(complete_and_exit);
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+void __ukl_exit(int error_code)
+#else
 SYSCALL_DEFINE1(exit, int, error_code)
+#endif
 {
 	do_exit((error_code&0xff)<<8);
 }
