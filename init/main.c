@@ -93,13 +93,12 @@
 #include <linux/jump_label.h>
 #include <linux/mem_encrypt.h>
 
+#include <linux/kmain.h>
 #include <asm/io.h>
 #include <asm/bugs.h>
 #include <asm/setup.h>
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
-
-#include <linux/kmain.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/initcall.h>
@@ -1009,24 +1008,17 @@ static void __init do_pre_smp_initcalls(void)
 static int run_init_process(const char *init_filename)
 {
 	#ifdef CONFIG_UNIKERNEL_LINUX
- 
-    printk("No. %d In run_init_process\n",1);
-
-    kthread_run((void*)interface, NULL, "Interface and Kmain \n");
-
-
+	printk("No. %d In run_init_process\n",1);
+	kthread_run((void*)interface, NULL, "Interface and Kmain \n");
 	while(1){
-      cond_resched();
+		cond_resched();
         }
- 
-    #else
-        
+        #else
 	argv_init[0] = init_filename;
 	pr_info("Run %s as init process\n", init_filename);
 	return do_execve(getname_kernel(init_filename),
 		(const char __user *const __user *)argv_init,
 		(const char __user *const __user *)envp_init);
-	
 	#endif
 }
 

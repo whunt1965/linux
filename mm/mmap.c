@@ -190,7 +190,6 @@ SYSCALL_DEFINE1(brk, unsigned long, brk)
 {
        return mybrk(brk);
 }
-
 static int do_brk_flags(unsigned long addr, unsigned long request, unsigned long flags,
 		struct list_head *uf);
 unsigned long mybrk(unsigned long brk)

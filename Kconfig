@@ -34,4 +34,3 @@ source "lib/Kconfig.debug"
 config UNIKERNEL_LINUX
        bool "Turn on UKL mode"
        def_bool y
-

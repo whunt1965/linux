@@ -1611,7 +1611,6 @@ extern int mprotect_fixup(struct vm_area_struct *vma,
 			  unsigned long end, unsigned long newflags);
 
 int do_mprotect_pkey(unsigned long start, size_t len, unsigned long prot, int pkey);
-
 /*
  * doesn't attempt to fault and will return short.
  */
