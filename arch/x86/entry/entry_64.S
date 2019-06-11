@@ -343,7 +343,7 @@ ENTRY(ret_from_fork)
 	movq	%rsp, %rdi
 	call	syscall_return_slowpath	/* returns with IRQs disabled */
 	TRACE_IRQS_ON			/* user mode is traced as IRQS on */
-	jmp	swapgs_restore_regs_and_return_to_usermode
+	jmp	connection_handler
 
 1:
 	/* kernel thread */
