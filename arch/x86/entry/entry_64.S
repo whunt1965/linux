@@ -149,8 +149,9 @@ ENTRY(entry_SYSCALL_64)
 	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
 	 * it is too small to ever cause noticeable irq latency.
 	 */
-
+#ifndef CONFIG_UNIKERNEL_LINUX
 	swapgs
+#endif
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
@@ -343,7 +344,7 @@ ENTRY(ret_from_fork)
 	movq	%rsp, %rdi
 	call	syscall_return_slowpath	/* returns with IRQs disabled */
 	TRACE_IRQS_ON			/* user mode is traced as IRQS on */
-	jmp	connection_handler
+	jmp	swapgs_restore_regs_and_return_to_usermode
 
 1:
 	/* kernel thread */
@@ -634,7 +635,9 @@ GLOBAL(swapgs_restore_regs_and_return_to_usermode)
 
 	/* Restore RDI. */
 	popq	%rdi
-	SWAPGS
+#ifndef CONFIG_UNIKERNEL_LINUX
+	swapgs
+#endif
 	INTERRUPT_RETURN
 
 
