@@ -32,11 +32,7 @@
 #define SEGMENT_RPL_MASK	0x3
 
 /* User mode is privilege level 3: */
-#ifndef CONFIG_UNIKERNEL_LINUX
 #define USER_RPL		0x3
-#else
-#define USER_RPL		0x0
-#endif
 
 /* Bit 2 is Table Indicator (TI): selects between LDT or GDT */
 #define SEGMENT_TI_MASK		0x4
@@ -178,15 +174,9 @@
  *
  * thus USER_DS should be between 32-bit and 64-bit code selectors:
  */
-#ifndef CONFIG_UNIKERNEL_LINUX
 #define GDT_ENTRY_DEFAULT_USER32_CS	4
 #define GDT_ENTRY_DEFAULT_USER_DS	5
 #define GDT_ENTRY_DEFAULT_USER_CS	6
-#else
-#define GDT_ENTRY_DEFAULT_USER32_CS	GDT_ENTRY_KERNEL32_CS
-#define GDT_ENTRY_DEFAULT_USER_DS	GDT_ENTRY_KERNEL_DS
-#define GDT_ENTRY_DEFAULT_USER_CS	GDT_ENTRY_KERNEL_CS
-#endif
 
 /* Needs two entries */
 #define GDT_ENTRY_TSS			8
@@ -212,17 +202,10 @@
 #define __KERNEL32_CS			(GDT_ENTRY_KERNEL32_CS*8)
 #define __KERNEL_CS			(GDT_ENTRY_KERNEL_CS*8)
 #define __KERNEL_DS			(GDT_ENTRY_KERNEL_DS*8)
-#ifndef CONFIG_UNIKERNEL_LINUX
 #define __USER32_CS			(GDT_ENTRY_DEFAULT_USER32_CS*8 + 3)
 #define __USER_DS			(GDT_ENTRY_DEFAULT_USER_DS*8 + 3)
 #define __USER32_DS			__USER_DS
 #define __USER_CS			(GDT_ENTRY_DEFAULT_USER_CS*8 + 3)
-#else
-#define __USER32_CS			__KERNEL32_CS
-#define __USER_DS			__KERNEL_DS
-#define __USER32_DS			__USER_DS
-#define __USER_CS			__KERNEL_CS
-#endif
 #define __CPUNODE_SEG			(GDT_ENTRY_CPUNODE*8 + 3)
 
 #endif
