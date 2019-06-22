@@ -158,10 +158,10 @@ ENTRY(entry_SYSCALL_64)
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 
 	/* Construct struct pt_regs on stack */
-	pushq	$__USER_DS				/* pt_regs->ss */
+	pushq	$__KERNEL_DS				/* pt_regs->ss */
 	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
 	pushq	%r11					/* pt_regs->flags */
-	pushq	$__USER_CS				/* pt_regs->cs */
+	pushq	$__KERNEL_CS				/* pt_regs->cs */
 	pushq	%rcx					/* pt_regs->ip */
 GLOBAL(entry_SYSCALL_64_after_hwframe)
 	pushq	%rax					/* pt_regs->orig_ax */
