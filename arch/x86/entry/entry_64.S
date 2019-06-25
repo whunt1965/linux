@@ -211,7 +211,7 @@ GLOBAL(entry_SYSCALL_64_after_hwframe)
 	cmpq	%rcx, %r11
 	jne	swapgs_restore_regs_and_return_to_usermode
 
-	cmpq	$__USER_CS, CS(%rsp)		/* CS must match SYSRET */
+	cmpq	$__KERNEL_CS, CS(%rsp)		/* CS must match SYSRET */
 	jne	swapgs_restore_regs_and_return_to_usermode
 
 	movq	R11(%rsp), %r11
@@ -241,7 +241,7 @@ GLOBAL(entry_SYSCALL_64_after_hwframe)
 
 	/* nothing to check for RSP */
 
-	cmpq	$__USER_DS, SS(%rsp)		/* SS must match SYSRET */
+	cmpq	$__KERNEL_DS, SS(%rsp)		/* SS must match SYSRET */
 	jne	swapgs_restore_regs_and_return_to_usermode
 
 	/*
@@ -273,7 +273,8 @@ syscall_return_via_sysret:
 
 	popq	%rdi
 	popq	%rsp
-	USERGS_SYSRET64
+	/* USERGS_SYSRET64 */
+	sysretq
 END(entry_SYSCALL_64)
 
 /*
@@ -1677,3 +1678,64 @@ ENTRY(rewind_stack_do_exit)
 
 	call	do_exit
 END(rewind_stack_do_exit)
+
+.macro UKL_PUSH_REGS
+	pushq   %rbx
+	pushq   %rcx
+	pushq   %rdx
+	pushq   %rsi
+	pushq   %rdi
+	pushq   %rbp
+	pushq   %rsp
+	pushq   %r8
+	pushq   %r9
+	pushq   %r10
+	pushq   %r11
+	pushq   %r12
+	pushq   %r13
+	pushq   %r14
+	pushq   %r15
+.endm
+
+.macro UKL_POP_REGS
+	popq   %r15
+	popq   %r14
+	popq   %r13
+	popq   %r12
+	popq   %r11
+	popq   %r10
+	popq   %r9
+	popq   %r8
+	popq   %rsp
+	popq   %rbp
+	popq   %rdi
+	popq   %rsi
+	popq   %rdx
+	popq   %rcx
+	popq   %rbx
+.endm
+
+ENTRY(__UKL_clone)
+	/* tss.sp2 is scratch space */
+
+	movq	0(%rsp), %r15
+	movq	%r15, 0(%rsi)
+	movq	%rsi, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+
+	/*push all regs */
+	UKL_PUSH_REGS
+	call	_do_fork		/* returns with IRQs disabled */
+
+	/* Parent Return */
+	UKL_POP_REGS
+	retq
+END(__UKL_clone)
+
+ENTRY(__child_return)
+	movq	%rax, %rdi
+	call	schedule_tail
+
+	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
+	movq	$0x0, %rax
+	retq	
+END(__child_return)
