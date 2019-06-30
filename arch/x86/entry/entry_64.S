@@ -149,9 +149,7 @@ ENTRY(entry_SYSCALL_64)
 	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
 	 * it is too small to ever cause noticeable irq latency.
 	 */
-#ifndef CONFIG_UNIKERNEL_LINUX
 	swapgs
-#endif
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
@@ -636,9 +634,7 @@ GLOBAL(swapgs_restore_regs_and_return_to_usermode)
 
 	/* Restore RDI. */
 	popq	%rdi
-#ifndef CONFIG_UNIKERNEL_LINUX
 	swapgs
-#endif
 	INTERRUPT_RETURN
 
 
@@ -1715,12 +1711,46 @@ END(rewind_stack_do_exit)
 	popq   %rbx
 .endm
 
+.macro UKL_PUSH_REGS_TO_CHILD_STACK
+	movq	%rbx, 88(%rsi)
+	movq	%rdx, 80(%rsi)
+	movq	%rsi, 72(%rsi)
+	movq	%rdi, 64(%rsi)
+	movq	%rbp, 56(%rsi)
+	movq	%r8, 48(%rsi)
+	movq	%r9, 40(%rsi)
+	movq	%r10, 32(%rsi)
+	movq	%r12, 24(%rsi)
+	movq	%r13, 16(%rsi)
+	movq	%r14, 8(%rsi)
+	movq	%r15, 0(%rsi)
+.endm
+
+.macro UKL_POP_REGS_FROM_CHILD_STACK
+	popq   %r15
+	popq   %r14
+	popq   %r13
+	popq   %r12
+	popq   %r10
+	popq   %r9
+	popq   %r8
+	popq   %rbp
+	popq   %rdi
+	popq   %rsi
+	popq   %rdx
+	popq   %rbx
+.endm
+
 ENTRY(__UKL_clone)
 	/* tss.sp2 is scratch space */
 
-	movq	0(%rsp), %r15
-	movq	%r15, 0(%rsi)
+	pushq   %r15
+	movq	8(%rsp), %r15
+	movq	%r15, 96(%rsi)
 	movq	%rsi, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+	popq   %r15
+
+	UKL_PUSH_REGS_TO_CHILD_STACK
 
 	/*push all regs */
 	UKL_PUSH_REGS
@@ -1736,6 +1766,8 @@ ENTRY(__child_return)
 	call	schedule_tail
 
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
+	UKL_POP_REGS_FROM_CHILD_STACK
 	movq	$0x0, %rax
+
 	retq	
 END(__child_return)
