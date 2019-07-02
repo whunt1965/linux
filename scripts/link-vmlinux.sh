@@ -44,22 +44,16 @@ info()
 modpost_link()
 {
 	local objects
-	local UKL
 
-	objects="--start-group 			\
-		--whole-archive			\
+	objects="--whole-archive				\
 		${KBUILD_VMLINUX_OBJS}				\
 		--no-whole-archive				\
+		--start-group					\
 		${KBUILD_VMLINUX_LIBS}				\
-		--end-group"
-
-	UKL="--start-group				\
 		../ukl/UKL.a 				\
 		--end-group"
 
-	${LD} -r -o partial.o ${objects}
-
-	${LD} ${KBUILD_LDFLAGS} --unresolved-symbols=ignore-all --allow-multiple-definition -r -o ${1} partial.o ${UKL}
+	${LD} ${KBUILD_LDFLAGS} --unresolved-symbols=ignore-all --allow-multiple-definition -r -o ${1} ${objects}
 }
 
 # Link of vmlinux
@@ -69,25 +63,19 @@ vmlinux_link()
 {
 	local lds="${objtree}/${KBUILD_LDS}"
 	local objects
-	local UKL
 
 	if [ "${SRCARCH}" != "um" ]; then
-		objects="--start-group 			\
-			--whole-archive			\
+		objects="--whole-archive			\
 			${KBUILD_VMLINUX_OBJS}			\
 			--no-whole-archive			\
+			--start-group				\
 			${KBUILD_VMLINUX_LIBS}			\
+			../ukl/UKL.a				\
 			--end-group				\
 			${1}"
 
-		UKL="--start-group				\
-		../ukl/UKL.a 				\
-		--end-group"
-
-		${LD} -r  -o partial2 ${objects}
-
 		${LD} --unresolved-symbols=ignore-all --allow-multiple-definition ${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux} -o ${2}	\
-			-T ${lds} partial2 ${UKL}
+			-T ${lds} ${objects}
 	else
 		objects="-Wl,--whole-archive			\
 			${KBUILD_VMLINUX_OBJS}			\
