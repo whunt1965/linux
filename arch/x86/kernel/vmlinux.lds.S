@@ -160,14 +160,16 @@ SECTIONS
 	/* Thread Local Storage sections */ 
         /* . = ALIGN(PAGE_SIZE); */ 
         .tdata : ALIGN(0x200000){
-                __tls_start = .;
+                __tls_data_start = .;
                 *(.tdata .tdata.* .gnu.linkonce.td.*)
+                __tls_data_end = .;
         } :tls    
         /* . = ALIGN(PAGE_SIZE); */ 
         .tbss : {  
+        	__tls_bss_start = .;
                 *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) 
-                /* . = __tls_start + 0x200000; */
-                __tls_end = .;
+                /* . = __tls_data_start + 0x200000; */
+                __tls_bss_end = .;
         } :tls 
 
 	/* Data */
