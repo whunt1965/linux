@@ -1758,6 +1758,7 @@ ENTRY(__UKL_clone)
 
 	/* Parent Return */
 	UKL_POP_REGS
+	call 	schedule
 	retq
 END(__UKL_clone)
 

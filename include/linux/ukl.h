@@ -139,3 +139,5 @@ int ukl_set_robust_list(struct robust_list_head * head, size_t len);
 int ukl_rt_sigprocmask(int how, sigset_t * nset,  sigset_t * oset, size_t sigsetsize);
 
 int ukl_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize);
+
+long ukl_futex(u32 * uaddr, int op, u32 val, struct __kernel_timespec * utime, u32 * uaddr2, u32 val3);

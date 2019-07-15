@@ -1016,7 +1016,8 @@ static int run_init_process(const char *init_filename)
 
 
 	while(1){
-      cond_resched();
+      	current->state = TASK_INTERRUPTIBLE;
+        schedule();
         }
  
     #else
