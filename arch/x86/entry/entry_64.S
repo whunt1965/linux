@@ -1723,7 +1723,7 @@ END(rewind_stack_do_exit)
 	movq	%r12, 24(%rsi)
 	movq	%r13, 16(%rsi)
 	movq	%r14, 8(%rsi)
-	movq	%r15, 0(%rsi)
+	movq	%rsp, 0(%rsi)
 .endm
 
 .macro UKL_POP_REGS_FROM_CHILD_STACK
@@ -1743,6 +1743,7 @@ END(rewind_stack_do_exit)
 
 ENTRY(__UKL_clone)
 	/* tss.sp2 is scratch space */
+	cli
 
 	pushq   %r15
 	movq	8(%rsp), %r15
@@ -1750,6 +1751,8 @@ ENTRY(__UKL_clone)
 	movq	%rsi, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	popq   %r15
 
+	subq	$8,%rsp
+	movq	$0, 0(%rsp)
 	UKL_PUSH_REGS_TO_CHILD_STACK
 
 	/*push all regs */
@@ -1758,7 +1761,13 @@ ENTRY(__UKL_clone)
 
 	/* Parent Return */
 	UKL_POP_REGS
-	call 	schedule
+	movq $0, %r15
+L1b:
+	call 	yield
+	cmp %r15, 0(%rsp)
+	je L1b 
+	sti
+	addq	$8,%rsp
 	retq
 END(__UKL_clone)
 
@@ -1768,7 +1777,10 @@ ENTRY(__child_return)
 
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
 	UKL_POP_REGS_FROM_CHILD_STACK
-	movq	$0x0, %rax
+	movq 	$1, 0(%r15)
+	call 	yield
 
+	movq	$0x0, %rax
+	sti
 	retq	
 END(__child_return)
