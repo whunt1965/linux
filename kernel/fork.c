@@ -2508,6 +2508,13 @@ SYSCALL_DEFINE6(clone, unsigned long, clone_flags, unsigned long, newsp,
 		int __user *, parent_tidptr,
 		int __user *, child_tidptr,
 		unsigned long, tls)
+#elif defined(CONFIG_UNIKERNEL_LINUX)
+long _ukl_do_fork(unsigned long clone_flags,
+	      unsigned long newsp,
+	      unsigned long stack_size,
+	      int __user *parent_tidptr,
+	      int __user *child_tidptr,
+	      unsigned long tls)
 #else
 SYSCALL_DEFINE5(clone, unsigned long, clone_flags, unsigned long, newsp,
 		 int __user *, parent_tidptr,
@@ -2524,10 +2531,10 @@ SYSCALL_DEFINE5(clone, unsigned long, clone_flags, unsigned long, newsp,
 		.stack		= newsp,
 		.tls		= tls,
 	};
-
-	if (!legacy_clone_args_valid(&args))
-		return -EINVAL;
-
+	if (!(clone_flags & CLONE_UKL)){
+		if (!legacy_clone_args_valid(&args))
+			return -EINVAL;
+	}
 	return _do_fork(&args);
 }
 #endif

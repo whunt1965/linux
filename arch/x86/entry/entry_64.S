@@ -1803,7 +1803,7 @@ ENTRY(__UKL_clone)
 
 	/*push all regs */
 	UKL_PUSH_REGS
-	call	_do_fork		/* returns with IRQs disabled */
+	call	_ukl_do_fork		/* returns with IRQs disabled */
 
 	/* Parent Return */
 	UKL_POP_REGS
