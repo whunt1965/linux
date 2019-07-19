@@ -1613,9 +1613,13 @@ int check_prlimit_permission(struct task_struct *task,
 	return security_task_prlimit(cred, tcred, flags);
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_prlimit64(pid_t pid, unsigned int resource, const struct rlimit64 * new_rlim,	struct rlimit64 * old_rlim)
+#else
 SYSCALL_DEFINE4(prlimit64, pid_t, pid, unsigned int, resource,
 		const struct rlimit64 __user *, new_rlim,
 		struct rlimit64 __user *, old_rlim)
+#endif
 {
 	struct rlimit64 old64, new64;
 	struct rlimit old, new;

@@ -3367,8 +3367,12 @@ out:
  * @head:	pointer to the list-head
  * @len:	length of the list-head, as userspace expects
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_set_robust_list(struct robust_list_head * head, size_t len)
+#else
 SYSCALL_DEFINE2(set_robust_list, struct robust_list_head __user *, head,
 		size_t, len)
+#endif
 {
 	if (!futex_cmpxchg_enabled)
 		return -ENOSYS;
@@ -3629,10 +3633,13 @@ long do_futex(u32 __user *uaddr, int op, u32 val, ktime_t *timeout,
 	return -ENOSYS;
 }
 
-
+#ifdef CONFIG_UNIKERNEL_LINUX
+long __ukl_futex(u32 * uaddr, int op, u32 val, struct __kernel_timespec * utime, u32 * uaddr2, u32 val3)
+#else
 SYSCALL_DEFINE6(futex, u32 __user *, uaddr, int, op, u32, val,
 		struct __kernel_timespec __user *, utime, u32 __user *, uaddr2,
 		u32, val3)
+#endif
 {
 	struct timespec64 ts;
 	ktime_t t, *tp = NULL;

@@ -62,6 +62,8 @@
 
 #include "process.h"
 
+asmlinkage void __child_return(void);
+
 /* Prints also some state that isn't saved in the pt_regs */
 void __show_regs(struct pt_regs *regs, enum show_regs_mode mode)
 {
@@ -393,7 +395,11 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
 	fork_frame = container_of(childregs, struct fork_frame, regs);
 	frame = &fork_frame->frame;
 	frame->bp = 0;
-	frame->ret_addr = (unsigned long) ret_from_fork;
+	if (clone_flags & CLONE_UKL){
+		frame->ret_addr = (unsigned long) __child_return;
+	}else{
+		frame->ret_addr = (unsigned long) ret_from_fork;	
+	}
 	p->thread.sp = (unsigned long) fork_frame;
 	p->thread.io_bitmap_ptr = NULL;
 

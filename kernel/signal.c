@@ -2880,8 +2880,12 @@ EXPORT_SYMBOL(restore_user_sigmask);
  *  @oset: previous value of signal mask if non-null
  *  @sigsetsize: size of sigset_t type
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_rt_sigprocmask(int how, sigset_t * nset,  sigset_t * oset, size_t sigsetsize)
+#else
 SYSCALL_DEFINE4(rt_sigprocmask, int, how, sigset_t __user *, nset,
 		sigset_t __user *, oset, size_t, sigsetsize)
+#endif
 {
 	sigset_t old_set, new_set;
 	int error;
@@ -4090,10 +4094,14 @@ SYSCALL_DEFINE3(sigprocmask, int, how, old_sigset_t __user *, nset,
  *  @oact: used to save the previous sigaction
  *  @sigsetsize: size of sigset_t type
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize)
+#else
 SYSCALL_DEFINE4(rt_sigaction, int, sig,
 		const struct sigaction __user *, act,
 		struct sigaction __user *, oact,
 		size_t, sigsetsize)
+#endif
 {
 	struct k_sigaction new_sa, old_sa;
 	int ret;
@@ -4114,6 +4122,7 @@ SYSCALL_DEFINE4(rt_sigaction, int, sig,
 
 	return 0;
 }
+
 #ifdef CONFIG_COMPAT
 COMPAT_SYSCALL_DEFINE4(rt_sigaction, int, sig,
 		const struct compat_sigaction __user *, act,

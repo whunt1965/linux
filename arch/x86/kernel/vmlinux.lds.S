@@ -8,7 +8,7 @@
  *   Copyright (C) 2007-2009  Sam Ravnborg <sam@ravnborg.org>
  *
  *
- * Don't define absolute symbols until and unless you know that symbol
+ * Dont define absolute symbols until and unless you know that symbol
  * value is should remain constant even if kernel image is relocated
  * at run time. Absolute symbols are not relocated. If symbol value should
  * change if kernel is relocated, make the symbol section relative and
@@ -159,11 +159,16 @@ SECTIONS
 
 	/* Thread Local Storage sections */ 
         .tdata : ALIGN(0x200000){
-                __tls_start = .;
-                *(.tdata .tdata.* .gnu.linkonce.td.*) 
+                __tls_data_start = .;
+                *(.tdata .tdata.* .gnu.linkonce.td.*)
+                __tls_data_end = .;
+        } :tls    
+        /* . = ALIGN(PAGE_SIZE); */ 
+        .tbss : {  
+        	__tls_bss_start = .;
                 *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) 
-                . = __tls_start + 0x200000;  
-                __tls_end = .;
+                /* . = __tls_data_start + 0x200000; */
+                __tls_bss_end = .;
         } :tls 
 
 	/* Data */
@@ -375,8 +380,8 @@ SECTIONS
 		*(.bss)
 		BSS_DECRYPTED
 		. = ALIGN(PAGE_SIZE);
-		__bss_stop = .;
 	}
+	__bss_stop = .;
 
 	. = ALIGN(PAGE_SIZE);
 	.brk : AT(ADDR(.brk) - LOAD_OFFSET) {

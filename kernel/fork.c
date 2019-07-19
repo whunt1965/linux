@@ -1595,7 +1595,11 @@ static void copy_seccomp(struct task_struct *p)
 #endif
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_set_tid_address(int * tidptr)
+#else
 SYSCALL_DEFINE1(set_tid_address, int __user *, tidptr)
+#endif
 {
 	current->clear_child_tid = tidptr;
 
@@ -2225,6 +2229,9 @@ long _do_fork(unsigned long clone_flags,
 
 	p = copy_process(clone_flags, stack_start, stack_size,
 			 child_tidptr, NULL, trace, tls, NUMA_NO_NODE);
+	if (clone_flags & CLONE_UKL){
+		printk("Address of new thread's task_struct is 0x%lx\n", p);
+	}
 	add_latent_entropy();
 
 	if (IS_ERR(p))

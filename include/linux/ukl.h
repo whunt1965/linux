@@ -116,14 +116,6 @@ long ukl_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigne
 
 // int ukl_uname(struct old_utsname * name);
 
-pid_t ukl_set_tid_address(int * tidptr);
-
-int ukl_set_robust_list(struct robust_list_head * head, size_t len);
-
-int ukl_rt_sigaction(int sig, const struct sigaction * act,	struct sigaction * oact, size_t sigsetsize);
-
-int ukl_rt_sigprocmask(int how, sigset_t * nset, sigset_t * oset, size_t sigsetsize);
-
 int ukl_prlimit64(pid_t pid, unsigned int resource,	const struct rlimit64 * new_rlim, struct rlimit64 * old_rlim);
 
 unsigned long ukl_brk(unsigned long brk);
@@ -139,3 +131,13 @@ int munmap(unsigned long addr, size_t len);
 int ukl_recv(int fd, void __user *ubuf, size_t size, unsigned int flags, struct sockaddr __user *addr, int __user *addr_len);
 
 int ukl_send(int fd, void *buff, size_t len, unsigned int flags, struct sockaddr *addr, int addr_len);
+
+int ukl_set_tid_address(int * ptr);
+
+int ukl_set_robust_list(struct robust_list_head * head, size_t len);
+
+int ukl_rt_sigprocmask(int how, sigset_t * nset,  sigset_t * oset, size_t sigsetsize);
+
+int ukl_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize);
+
+long ukl_futex(u32 * uaddr, int op, u32 val, struct __kernel_timespec * utime, u32 * uaddr2, u32 val3);
