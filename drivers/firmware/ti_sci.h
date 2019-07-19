@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSD-3-Clause
+/* SPDX-License-Identifier: BSD-3-Clause */
 /*
  * Texas Instruments System Control Interface (TISCI) Protocol
  *
@@ -34,6 +34,13 @@
 #define TI_SCI_MSG_SET_CLOCK_FREQ	0x010c
 #define TI_SCI_MSG_QUERY_CLOCK_FREQ	0x010d
 #define TI_SCI_MSG_GET_CLOCK_FREQ	0x010e
+
+/* Resource Management Requests */
+#define TI_SCI_MSG_GET_RESOURCE_RANGE	0x1500
+
+/* IRQ requests */
+#define TI_SCI_MSG_SET_IRQ		0x1000
+#define TI_SCI_MSG_FREE_IRQ		0x1001
 
 /**
  * struct ti_sci_msg_hdr - Generic Message Header for All messages and responses
@@ -195,7 +202,8 @@ struct ti_sci_msg_req_set_device_resets {
  * @dev_id:	Device identifier this request is for
  * @clk_id:	Clock identifier for the device for this request.
  *		Each device has it's own set of clock inputs. This indexes
- *		which clock input to modify.
+ *		which clock input to modify. Set to 255 if clock ID is
+ *		greater than or equal to 255.
  * @request_state: Request the state for the clock to be set to.
  *		MSG_CLOCK_SW_STATE_UNREQ: The IP does not require this clock,
  *		it can be disabled, regardless of the state of the device
@@ -206,6 +214,9 @@ struct ti_sci_msg_req_set_device_resets {
  *		being required by the device.(default)
  *		MSG_CLOCK_SW_STATE_REQ:  Configure the clock to be enabled,
  *		regardless of the state of the device.
+ * @clk_id_32:	Clock identifier for the device for this request.
+ *		Only to be used if the clock ID is greater than or equal to
+ *		255.
  *
  * Normally, all required clocks are managed by TISCI entity, this is used
  * only for specific control *IF* required. Auto managed state is
@@ -227,6 +238,7 @@ struct ti_sci_msg_req_set_clock_state {
 #define MSG_CLOCK_SW_STATE_AUTO		1
 #define MSG_CLOCK_SW_STATE_REQ		2
 	u8 request_state;
+	u32 clk_id_32;
 } __packed;
 
 /**
@@ -235,7 +247,11 @@ struct ti_sci_msg_req_set_clock_state {
  * @dev_id:	Device identifier this request is for
  * @clk_id:	Clock identifier for the device for this request.
  *		Each device has it's own set of clock inputs. This indexes
- *		which clock input to get state of.
+ *		which clock input to get state of. Set to 255 if the clock
+ *		ID is greater than or equal to 255.
+ * @clk_id_32:	Clock identifier for the device for the request.
+ *		Only to be used if the clock ID is greater than or equal to
+ *		255.
  *
  * Request type is TI_SCI_MSG_GET_CLOCK_STATE, response is state
  * of the clock
@@ -244,6 +260,7 @@ struct ti_sci_msg_req_get_clock_state {
 	struct ti_sci_msg_hdr hdr;
 	u32 dev_id;
 	u8 clk_id;
+	u32 clk_id_32;
 } __packed;
 
 /**
@@ -271,9 +288,13 @@ struct ti_sci_msg_resp_get_clock_state {
  * @dev_id:	Device identifier this request is for
  * @clk_id:	Clock identifier for the device for this request.
  *		Each device has it's own set of clock inputs. This indexes
- *		which clock input to modify.
+ *		which clock input to modify. Set to 255 if clock ID is
+ *		greater than or equal to 255.
  * @parent_id:	The new clock parent is selectable by an index via this
- *		parameter.
+ *		parameter. Set to 255 if clock ID is greater than or
+ *		equal to 255.
+ * @clk_id_32:	Clock identifier if @clk_id field is 255.
+ * @parent_id_32:	Parent identifier if @parent_id is 255.
  *
  * Request type is TI_SCI_MSG_SET_CLOCK_PARENT, response is generic
  * ACK / NACK message.
@@ -283,6 +304,8 @@ struct ti_sci_msg_req_set_clock_parent {
 	u32 dev_id;
 	u8 clk_id;
 	u8 parent_id;
+	u32 clk_id_32;
+	u32 parent_id_32;
 } __packed;
 
 /**
@@ -291,7 +314,10 @@ struct ti_sci_msg_req_set_clock_parent {
  * @dev_id:	Device identifier this request is for
  * @clk_id:	Clock identifier for the device for this request.
  *		Each device has it's own set of clock inputs. This indexes
- *		which clock input to get the parent for.
+ *		which clock input to get the parent for. If this field
+ *		contains 255, the actual clock identifier is stored in
+ *		@clk_id_32.
+ * @clk_id_32:	Clock identifier if the @clk_id field contains 255.
  *
  * Request type is TI_SCI_MSG_GET_CLOCK_PARENT, response is parent information
  */
@@ -299,25 +325,32 @@ struct ti_sci_msg_req_get_clock_parent {
 	struct ti_sci_msg_hdr hdr;
 	u32 dev_id;
 	u8 clk_id;
+	u32 clk_id_32;
 } __packed;
 
 /**
  * struct ti_sci_msg_resp_get_clock_parent - Response with clock parent
  * @hdr:	Generic Header
- * @parent_id:	The current clock parent
+ * @parent_id:	The current clock parent. If set to 255, the current parent
+ *		ID can be found from the @parent_id_32 field.
+ * @parent_id_32:	Current clock parent if @parent_id field is set to
+ *			255.
  *
  * Response to TI_SCI_MSG_GET_CLOCK_PARENT.
  */
 struct ti_sci_msg_resp_get_clock_parent {
 	struct ti_sci_msg_hdr hdr;
 	u8 parent_id;
+	u32 parent_id_32;
 } __packed;
 
 /**
  * struct ti_sci_msg_req_get_clock_num_parents - Request to get clock parents
  * @hdr:	Generic header
  * @dev_id:	Device identifier this request is for
- * @clk_id:	Clock identifier for the device for this request.
+ * @clk_id:	Clock identifier for the device for this request. Set to
+ *		255 if clock ID is greater than or equal to 255.
+ * @clk_id_32:	Clock identifier if the @clk_id field contains 255.
  *
  * This request provides information about how many clock parent options
  * are available for a given clock to a device. This is typically used
@@ -330,18 +363,24 @@ struct ti_sci_msg_req_get_clock_num_parents {
 	struct ti_sci_msg_hdr hdr;
 	u32 dev_id;
 	u8 clk_id;
+	u32 clk_id_32;
 } __packed;
 
 /**
  * struct ti_sci_msg_resp_get_clock_num_parents - Response for get clk parents
  * @hdr:		Generic header
- * @num_parents:	Number of clock parents
+ * @num_parents:	Number of clock parents. If set to 255, the actual
+ *			number of parents is stored into @num_parents_32
+ *			field instead.
+ * @num_parents_32:	Number of clock parents if @num_parents field is
+ *			set to 255.
  *
  * Response to TI_SCI_MSG_GET_NUM_CLOCK_PARENTS
  */
 struct ti_sci_msg_resp_get_clock_num_parents {
 	struct ti_sci_msg_hdr hdr;
 	u8 num_parents;
+	u32 num_parents_32;
 } __packed;
 
 /**
@@ -356,7 +395,9 @@ struct ti_sci_msg_resp_get_clock_num_parents {
  * @max_freq_hz: The maximum allowable frequency in Hz. This is the maximum
  *		allowable programmed frequency and does not account for clock
  *		tolerances and jitter.
- * @clk_id:	Clock identifier for the device for this request.
+ * @clk_id:	Clock identifier for the device for this request. Set to
+ *		255 if clock identifier is greater than or equal to 255.
+ * @clk_id_32:	Clock identifier if @clk_id is set to 255.
  *
  * NOTE: Normally clock frequency management is automatically done by TISCI
  * entity. In case of specific requests, TISCI evaluates capability to achieve
@@ -373,6 +414,7 @@ struct ti_sci_msg_req_query_clock_freq {
 	u64 target_freq_hz;
 	u64 max_freq_hz;
 	u8 clk_id;
+	u32 clk_id_32;
 } __packed;
 
 /**
@@ -400,7 +442,9 @@ struct ti_sci_msg_resp_query_clock_freq {
  * @max_freq_hz: The maximum allowable frequency in Hz. This is the maximum
  *		allowable programmed frequency and does not account for clock
  *		tolerances and jitter.
- * @clk_id:	Clock identifier for the device for this request.
+ * @clk_id:	Clock identifier for the device for this request. Set to
+ *		255 if clock ID is greater than or equal to 255.
+ * @clk_id_32:	Clock identifier if @clk_id field is set to 255.
  *
  * NOTE: Normally clock frequency management is automatically done by TISCI
  * entity. In case of specific requests, TISCI evaluates capability to achieve
@@ -429,13 +473,16 @@ struct ti_sci_msg_req_set_clock_freq {
 	u64 target_freq_hz;
 	u64 max_freq_hz;
 	u8 clk_id;
+	u32 clk_id_32;
 } __packed;
 
 /**
  * struct ti_sci_msg_req_get_clock_freq - Request to get the clock frequency
  * @hdr:	Generic Header
  * @dev_id:	Device identifier this request is for
- * @clk_id:	Clock identifier for the device for this request.
+ * @clk_id:	Clock identifier for the device for this request. Set to
+ *		255 if clock ID is greater than or equal to 255.
+ * @clk_id_32:	Clock identifier if @clk_id field is set to 255.
  *
  * NOTE: Normally clock frequency management is automatically done by TISCI
  * entity. In some cases, clock frequencies are configured by host.
@@ -447,6 +494,7 @@ struct ti_sci_msg_req_get_clock_freq {
 	struct ti_sci_msg_hdr hdr;
 	u32 dev_id;
 	u8 clk_id;
+	u32 clk_id_32;
 } __packed;
 
 /**
@@ -459,6 +507,101 @@ struct ti_sci_msg_req_get_clock_freq {
 struct ti_sci_msg_resp_get_clock_freq {
 	struct ti_sci_msg_hdr hdr;
 	u64 freq_hz;
+} __packed;
+
+#define TI_SCI_IRQ_SECONDARY_HOST_INVALID	0xff
+
+/**
+ * struct ti_sci_msg_req_get_resource_range - Request to get a host's assigned
+ *					      range of resources.
+ * @hdr:		Generic Header
+ * @type:		Unique resource assignment type
+ * @subtype:		Resource assignment subtype within the resource type.
+ * @secondary_host:	Host processing entity to which the resources are
+ *			allocated. This is required only when the destination
+ *			host id id different from ti sci interface host id,
+ *			else TI_SCI_IRQ_SECONDARY_HOST_INVALID can be passed.
+ *
+ * Request type is TI_SCI_MSG_GET_RESOURCE_RANGE. Responded with requested
+ * resource range which is of type TI_SCI_MSG_GET_RESOURCE_RANGE.
+ */
+struct ti_sci_msg_req_get_resource_range {
+	struct ti_sci_msg_hdr hdr;
+#define MSG_RM_RESOURCE_TYPE_MASK	GENMASK(9, 0)
+#define MSG_RM_RESOURCE_SUBTYPE_MASK	GENMASK(5, 0)
+	u16 type;
+	u8 subtype;
+	u8 secondary_host;
+} __packed;
+
+/**
+ * struct ti_sci_msg_resp_get_resource_range - Response to resource get range.
+ * @hdr:		Generic Header
+ * @range_start:	Start index of the resource range.
+ * @range_num:		Number of resources in the range.
+ *
+ * Response to request TI_SCI_MSG_GET_RESOURCE_RANGE.
+ */
+struct ti_sci_msg_resp_get_resource_range {
+	struct ti_sci_msg_hdr hdr;
+	u16 range_start;
+	u16 range_num;
+} __packed;
+
+/**
+ * struct ti_sci_msg_req_manage_irq - Request to configure/release the route
+ *					between the dev and the host.
+ * @hdr:		Generic Header
+ * @valid_params:	Bit fields defining the validity of interrupt source
+ *			parameters. If a bit is not set, then corresponding
+ *			field is not valid and will not be used for route set.
+ *			Bit field definitions:
+ *			0 - Valid bit for @dst_id
+ *			1 - Valid bit for @dst_host_irq
+ *			2 - Valid bit for @ia_id
+ *			3 - Valid bit for @vint
+ *			4 - Valid bit for @global_event
+ *			5 - Valid bit for @vint_status_bit_index
+ *			31 - Valid bit for @secondary_host
+ * @src_id:		IRQ source peripheral ID.
+ * @src_index:		IRQ source index within the peripheral
+ * @dst_id:		IRQ Destination ID. Based on the architecture it can be
+ *			IRQ controller or host processor ID.
+ * @dst_host_irq:	IRQ number of the destination host IRQ controller
+ * @ia_id:		Device ID of the interrupt aggregator in which the
+ *			vint resides.
+ * @vint:		Virtual interrupt number if the interrupt route
+ *			is through an interrupt aggregator.
+ * @global_event:	Global event that is to be mapped to interrupt
+ *			aggregator virtual interrupt status bit.
+ * @vint_status_bit:	Virtual interrupt status bit if the interrupt route
+ *			utilizes an interrupt aggregator status bit.
+ * @secondary_host:	Host ID of the IRQ destination computing entity. This is
+ *			required only when destination host id is different
+ *			from ti sci interface host id.
+ *
+ * Request type is TI_SCI_MSG_SET/RELEASE_IRQ.
+ * Response is generic ACK / NACK message.
+ */
+struct ti_sci_msg_req_manage_irq {
+	struct ti_sci_msg_hdr hdr;
+#define MSG_FLAG_DST_ID_VALID			TI_SCI_MSG_FLAG(0)
+#define MSG_FLAG_DST_HOST_IRQ_VALID		TI_SCI_MSG_FLAG(1)
+#define MSG_FLAG_IA_ID_VALID			TI_SCI_MSG_FLAG(2)
+#define MSG_FLAG_VINT_VALID			TI_SCI_MSG_FLAG(3)
+#define MSG_FLAG_GLB_EVNT_VALID			TI_SCI_MSG_FLAG(4)
+#define MSG_FLAG_VINT_STS_BIT_VALID		TI_SCI_MSG_FLAG(5)
+#define MSG_FLAG_SHOST_VALID			TI_SCI_MSG_FLAG(31)
+	u32 valid_params;
+	u16 src_id;
+	u16 src_index;
+	u16 dst_id;
+	u16 dst_host_irq;
+	u16 ia_id;
+	u16 vint;
+	u16 global_event;
+	u8 vint_status_bit;
+	u8 secondary_host;
 } __packed;
 
 #endif /* __TI_SCI_H */

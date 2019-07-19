@@ -151,6 +151,8 @@ static inline const char *pci_power_name(pci_power_t state)
 #define PCI_PM_BUS_WAIT		50
 
 /**
+ * typedef pci_channel_state_t
+ *
  * The pci_channel state describes connectivity between the CPU and
  * the PCI device.  If some PCI bus between here and the PCI device
  * has crashed or locked up, this info is reflected here.
@@ -258,6 +260,7 @@ enum pci_bus_speed {
 	PCIE_SPEED_5_0GT		= 0x15,
 	PCIE_SPEED_8_0GT		= 0x16,
 	PCIE_SPEED_16_0GT		= 0x17,
+	PCIE_SPEED_32_0GT		= 0x18,
 	PCI_SPEED_UNKNOWN		= 0xff,
 };
 
@@ -344,10 +347,13 @@ struct pci_dev {
 						   D3cold, not set for devices
 						   powered on/off by the
 						   corresponding bridge */
+	unsigned int	skip_bus_pm:1;	/* Internal: Skip bus-level PM */
 	unsigned int	ignore_hotplug:1;	/* Ignore hotplug events */
 	unsigned int	hotplug_user_indicators:1; /* SlotCtl indicators
 						      controlled exclusively by
 						      user sysfs */
+	unsigned int	clear_retrain_link:1;	/* Need to clear Retrain Link
+						   bit manually */
 	unsigned int	d3_delay;	/* D3->D0 transition time in ms */
 	unsigned int	d3cold_delay;	/* D3cold->D0 transition time in ms */
 
@@ -380,7 +386,7 @@ struct pci_dev {
 
 	unsigned int	is_busmaster:1;		/* Is busmaster */
 	unsigned int	no_msi:1;		/* May not use MSI */
-	unsigned int	no_64bit_msi:1; 	/* May only use 32-bit MSIs */
+	unsigned int	no_64bit_msi:1;		/* May only use 32-bit MSIs */
 	unsigned int	block_cfg_access:1;	/* Config space access blocked */
 	unsigned int	broken_parity_status:1;	/* Generates false positive parity */
 	unsigned int	irq_reroute_variant:2;	/* Needs IRQ rerouting variant */
@@ -490,6 +496,7 @@ struct pci_host_bridge {
 	void		*sysdata;
 	int		busnr;
 	struct list_head windows;	/* resource_entry */
+	struct list_head dma_ranges;	/* dma ranges resource list */
 	u8 (*swizzle_irq)(struct pci_dev *, u8 *); /* Platform IRQ swizzler */
 	int (*map_irq)(const struct pci_dev *, u8, u8);
 	void (*release_fn)(struct pci_host_bridge *);
@@ -502,6 +509,8 @@ struct pci_host_bridge {
 	unsigned int	native_shpc_hotplug:1;	/* OS may use SHPC hotplug */
 	unsigned int	native_pme:1;		/* OS may use PCIe PME */
 	unsigned int	native_ltr:1;		/* OS may use PCIe LTR */
+	unsigned int	preserve_config:1;	/* Preserve FW resource setup */
+
 	/* Resource alignment requirements */
 	resource_size_t (*align_resource)(struct pci_dev *dev,
 			const struct resource *res,
@@ -595,6 +604,11 @@ struct pci_bus {
 };
 
 #define to_pci_bus(n)	container_of(n, struct pci_bus, dev)
+
+static inline u16 pci_dev_id(struct pci_dev *dev)
+{
+	return PCI_DEVID(dev->bus->number, dev->devfn);
+}
 
 /*
  * Returns true if the PCI bus is root (behind host-PCI bridge),
@@ -767,6 +781,50 @@ struct pci_error_handlers {
 
 
 struct module;
+
+/**
+ * struct pci_driver - PCI driver structure
+ * @node:	List of driver structures.
+ * @name:	Driver name.
+ * @id_table:	Pointer to table of device IDs the driver is
+ *		interested in.  Most drivers should export this
+ *		table using MODULE_DEVICE_TABLE(pci,...).
+ * @probe:	This probing function gets called (during execution
+ *		of pci_register_driver() for already existing
+ *		devices or later if a new device gets inserted) for
+ *		all PCI devices which match the ID table and are not
+ *		"owned" by the other drivers yet. This function gets
+ *		passed a "struct pci_dev \*" for each device whose
+ *		entry in the ID table matches the device. The probe
+ *		function returns zero when the driver chooses to
+ *		take "ownership" of the device or an error code
+ *		(negative number) otherwise.
+ *		The probe function always gets called from process
+ *		context, so it can sleep.
+ * @remove:	The remove() function gets called whenever a device
+ *		being handled by this driver is removed (either during
+ *		deregistration of the driver or when it's manually
+ *		pulled out of a hot-pluggable slot).
+ *		The remove function always gets called from process
+ *		context, so it can sleep.
+ * @suspend:	Put device into low power state.
+ * @suspend_late: Put device into low power state.
+ * @resume_early: Wake device from low power state.
+ * @resume:	Wake device from low power state.
+ *		(Please see Documentation/power/pci.rst for descriptions
+ *		of PCI Power Management and the related functions.)
+ * @shutdown:	Hook into reboot_notifier_list (kernel/sys.c).
+ *		Intended to stop any idling DMA operations.
+ *		Useful for enabling wake-on-lan (NIC) or changing
+ *		the power state of a device before reboot.
+ *		e.g. drivers/net/e100.c.
+ * @sriov_configure: Optional driver callback to allow configuration of
+ *		number of VFs to enable via sysfs "sriov_numvfs" file.
+ * @err_handler: See Documentation/PCI/pci-error-recovery.rst
+ * @groups:	Sysfs attribute groups.
+ * @driver:	Driver model structure.
+ * @dynids:	List of dynamically added device IDs.
+ */
 struct pci_driver {
 	struct list_head	node;
 	const char		*name;
@@ -1233,7 +1291,6 @@ int __must_check pci_request_regions(struct pci_dev *, const char *);
 int __must_check pci_request_regions_exclusive(struct pci_dev *, const char *);
 void pci_release_regions(struct pci_dev *);
 int __must_check pci_request_region(struct pci_dev *, int, const char *);
-int __must_check pci_request_region_exclusive(struct pci_dev *, int, const char *);
 void pci_release_region(struct pci_dev *, int);
 int pci_request_selected_regions(struct pci_dev *, int, const char *);
 int pci_request_selected_regions_exclusive(struct pci_dev *, int, const char *);
@@ -1521,21 +1578,6 @@ static inline void pcie_ecrc_get_policy(char *str) { }
 
 bool pci_ats_disabled(void);
 
-#ifdef CONFIG_PCI_ATS
-/* Address Translation Service */
-void pci_ats_init(struct pci_dev *dev);
-int pci_enable_ats(struct pci_dev *dev, int ps);
-void pci_disable_ats(struct pci_dev *dev);
-int pci_ats_queue_depth(struct pci_dev *dev);
-int pci_ats_page_aligned(struct pci_dev *dev);
-#else
-static inline void pci_ats_init(struct pci_dev *d) { }
-static inline int pci_enable_ats(struct pci_dev *d, int ps) { return -ENODEV; }
-static inline void pci_disable_ats(struct pci_dev *d) { }
-static inline int pci_ats_queue_depth(struct pci_dev *d) { return -ENODEV; }
-static inline int pci_ats_page_aligned(struct pci_dev *dev) { return 0; }
-#endif
-
 #ifdef CONFIG_PCIE_PTM
 int pci_enable_ptm(struct pci_dev *dev, u8 *granularity);
 #else
@@ -1728,7 +1770,23 @@ static inline int pci_irqd_intx_xlate(struct irq_domain *d,
 static inline const struct pci_device_id *pci_match_id(const struct pci_device_id *ids,
 							 struct pci_dev *dev)
 { return NULL; }
+static inline bool pci_ats_disabled(void) { return true; }
 #endif /* CONFIG_PCI */
+
+#ifdef CONFIG_PCI_ATS
+/* Address Translation Service */
+void pci_ats_init(struct pci_dev *dev);
+int pci_enable_ats(struct pci_dev *dev, int ps);
+void pci_disable_ats(struct pci_dev *dev);
+int pci_ats_queue_depth(struct pci_dev *dev);
+int pci_ats_page_aligned(struct pci_dev *dev);
+#else
+static inline void pci_ats_init(struct pci_dev *d) { }
+static inline int pci_enable_ats(struct pci_dev *d, int ps) { return -ENODEV; }
+static inline void pci_disable_ats(struct pci_dev *d) { }
+static inline int pci_ats_queue_depth(struct pci_dev *d) { return -ENODEV; }
+static inline int pci_ats_page_aligned(struct pci_dev *dev) { return 0; }
+#endif
 
 /* Include architecture-dependent settings and functions */
 
@@ -2198,7 +2256,7 @@ static inline u8 pci_vpd_srdt_tag(const u8 *srdt)
 
 /**
  * pci_vpd_info_field_size - Extracts the information field length
- * @lrdt: Pointer to the beginning of an information field header
+ * @info_field: Pointer to the beginning of an information field header
  *
  * Returns the extracted information field length.
  */
@@ -2362,5 +2420,8 @@ void pci_uevent_ers(struct pci_dev *pdev, enum  pci_ers_result err_type);
 #define pci_notice(pdev, fmt, arg...)	dev_notice(&(pdev)->dev, fmt, ##arg)
 #define pci_info(pdev, fmt, arg...)	dev_info(&(pdev)->dev, fmt, ##arg)
 #define pci_dbg(pdev, fmt, arg...)	dev_dbg(&(pdev)->dev, fmt, ##arg)
+
+#define pci_notice_ratelimited(pdev, fmt, arg...) \
+	dev_notice_ratelimited(&(pdev)->dev, fmt, ##arg)
 
 #endif /* LINUX_PCI_H */
