@@ -59,7 +59,11 @@ EXPORT_SYMBOL(sys_tz);
  * why not move it into the appropriate arch directory (for those
  * architectures that need it).
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+time_t _ukl_time (time_t *tloc)
+#else
 SYSCALL_DEFINE1(time, time_t __user *, tloc)
+#endif
 {
 	time_t i = (time_t)ktime_get_real_seconds();
 
@@ -137,8 +141,12 @@ SYSCALL_DEFINE1(stime32, old_time32_t __user *, tptr)
 #endif /* __ARCH_WANT_SYS_TIME32 */
 #endif
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int _ukl_gettimeofday(struct timeval* tv, struct timezone* tz)
+#else
 SYSCALL_DEFINE2(gettimeofday, struct timeval __user *, tv,
 		struct timezone __user *, tz)
+#endif
 {
 	if (likely(tv != NULL)) {
 		struct timespec64 ts;

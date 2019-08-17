@@ -1751,8 +1751,12 @@ out:
 
 #if !defined(CONFIG_64BIT_TIME) || defined(CONFIG_64BIT)
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int _ukl_nanosleep(struct __kernel_timespec *rqtp, struct __kernel_timespec *rmtp)
+#else
 SYSCALL_DEFINE2(nanosleep, struct __kernel_timespec __user *, rqtp,
 		struct __kernel_timespec __user *, rmtp)
+#endif
 {
 	struct timespec64 tu;
 

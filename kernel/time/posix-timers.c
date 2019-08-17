@@ -1022,8 +1022,13 @@ SYSCALL_DEFINE2(clock_settime, const clockid_t, which_clock,
 	return kc->clock_set(which_clock, &new_tp);
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int _ukl_clock_gettime(const clockid_t which_clock, struct __kernel_timespec * tp)
+#else
 SYSCALL_DEFINE2(clock_gettime, const clockid_t, which_clock,
 		struct __kernel_timespec __user *, tp)
+
+#endif
 {
 	const struct k_clock *kc = clockid_to_kclock(which_clock);
 	struct timespec64 kernel_tp;

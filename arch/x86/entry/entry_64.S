@@ -1758,18 +1758,20 @@ END(rewind_stack_do_exit)
 .endm
 
 .macro UKL_PUSH_REGS_TO_CHILD_STACK
-	movq	%rbx, 88(%rsi)
-	movq	%rdx, 80(%rsi)
-	movq	%rsi, 72(%rsi)
-	movq	%rdi, 64(%rsi)
-	movq	%rbp, 56(%rsi)
-	movq	%r8, 48(%rsi)
-	movq	%r9, 40(%rsi)
-	movq	%r10, 32(%rsi)
-	movq	%r12, 24(%rsi)
-	movq	%r13, 16(%rsi)
-	movq	%r14, 8(%rsi)
-	movq	%rsp, 0(%rsi)
+	pushq   %rbx
+	pushq   %rcx
+	pushq   %rdx
+	pushq   %rsi
+	pushq   %rdi
+	pushq   %rbp
+	pushq   %r8
+	pushq   %r9
+	pushq   %r10
+	pushq   %r11
+	pushq   %r12
+	pushq   %r13
+	pushq   %r14
+	pushq   %r15
 .endm
 
 .macro UKL_POP_REGS_FROM_CHILD_STACK
@@ -1787,33 +1789,68 @@ END(rewind_stack_do_exit)
 	popq   %rbx
 .endm
 
+.macro PUSH_AND_DONT_CLEAR_REGS rdx=%rdx rax=%rax save_ret=0
+	/*
+	 * Push registers and sanitize registers of values that a
+	 * speculation attack might otherwise want to exploit. The
+	 * lower registers are likely clobbered well before they
+	 * could be put to use in a speculative execution gadget.
+	 * Interleave XOR with PUSH for better uop scheduling:
+	 */
+	.if \save_ret
+	pushq	%rsi		/* pt_regs->si */
+	movq	8(%rsp), %rsi	/* temporarily store the return address in %rsi */
+	movq	%rdi, 8(%rsp)	/* pt_regs->di (overwriting original return address) */
+	.else
+	pushq   %rdi		/* pt_regs->di */
+	pushq   %rsi		/* pt_regs->si */
+	.endif
+	pushq	\rdx		/* pt_regs->dx */
+	pushq   %rcx		/* pt_regs->cx */
+	pushq   \rax		/* pt_regs->ax */
+	pushq   %r8		/* pt_regs->r8 */
+	pushq   %r9		/* pt_regs->r9 */
+	pushq   %r10		/* pt_regs->r10 */
+	pushq   %r11		/* pt_regs->r11 */
+	pushq	%rbx		/* pt_regs->rbx */
+	pushq	%rbp		/* pt_regs->rbp */
+	pushq	%r12		/* pt_regs->r12 */
+	pushq	%r13		/* pt_regs->r13 */
+	pushq	%r14		/* pt_regs->r14 */
+	pushq	%r15		/* pt_regs->r15 */
+	.if \save_ret
+	pushq	%rsi		/* return address on top of stack */
+	.endif
+.endm
+
 ENTRY(__UKL_clone)
-	/* tss.sp2 is scratch space */
-	cli
+	subq	$8,%rsi
+	pushq 	%r15
+	movq	8(%rsp),%r15
+	movq	%r15,0(%rsi)
+	popq 	%r15
 
-	pushq   %r15
-	movq	8(%rsp), %r15
-	movq	%r15, 96(%rsi)
-	movq	%rsi, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
-	popq   %r15
+	/* tss.sp2 is scratch space. */
+	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 
-	subq	$8,%rsp
-	movq	$0, 0(%rsp)
-	UKL_PUSH_REGS_TO_CHILD_STACK
+	/* Construct struct pt_regs on stack */
+	pushq	$__KERNEL_DS				/* pt_regs->ss */
+	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
+	pushq	%r11					/* pt_regs->flags */
+	pushq	$__KERNEL_CS				/* pt_regs->cs */
+	pushq	%rcx					/* pt_regs->ip */
+	pushq	%rax					/* pt_regs->orig_ax */
+
+	PUSH_AND_DONT_CLEAR_REGS rax=$-ENOSYS
 
 	/*push all regs */
+	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
 	UKL_PUSH_REGS
 	call	_ukl_do_fork		/* returns with IRQs disabled */
 
 	/* Parent Return */
 	UKL_POP_REGS
-	movq $0, %r15
-L1b:
-	call 	yield
-	cmp %r15, 0(%rsp)
-	je L1b 
-	sti
-	addq	$8,%rsp
 	retq
 END(__UKL_clone)
 
@@ -1821,12 +1858,10 @@ ENTRY(__child_return)
 	movq	%rax, %rdi
 	call	schedule_tail
 
-	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
-	UKL_POP_REGS_FROM_CHILD_STACK
-	movq 	$1, 0(%r15)
-	call 	yield
+	POP_REGS
 
 	movq	$0x0, %rax
-	sti
+	movq	32(%rsp), %rsp
+	call 	stackworker
 	retq	
 END(__child_return)

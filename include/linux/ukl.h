@@ -141,3 +141,27 @@ int ukl_rt_sigprocmask(int how, sigset_t * nset,  sigset_t * oset, size_t sigset
 int ukl_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize);
 
 long ukl_futex(u32 * uaddr, int op, u32 val, struct __kernel_timespec * utime, u32 * uaddr2, u32 val3);
+
+int ukl_setrlimit (unsigned int  resource, const struct rlimit* rlim);
+
+int ukl_clock_gettime(const clockid_t which_clock, struct __kernel_timespec * tp);
+
+int ukl_gettimeofday(struct timeval* tv, struct timezone* tz);
+
+int ukl_epoll_create1(int flags);
+
+time_t ukl_time (time_t *t);
+
+int ukl_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg);
+
+int ukl_pipe2(int* fildes, int flags);
+
+int ukl_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event);
+
+int ukl_epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout);
+
+int ukl_nanosleep(struct __kernel_timespec *rqtp, struct __kernel_timespec *rmtp);
+
+int ukl_mlock(long start, size_t len);
+
+int ukl_mlock2(long start, size_t len, int flags);

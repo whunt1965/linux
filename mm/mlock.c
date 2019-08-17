@@ -713,12 +713,20 @@ static __must_check int do_mlock(unsigned long start, size_t len, vm_flags_t fla
 	return 0;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_mlock(long start, size_t len)
+#else
 SYSCALL_DEFINE2(mlock, unsigned long, start, size_t, len)
+#endif
 {
 	return do_mlock(start, len, VM_LOCKED);
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_mlock2(long start, size_t len, int flags)
+#else
 SYSCALL_DEFINE3(mlock2, unsigned long, start, size_t, len, int, flags)
+#endif
 {
 	vm_flags_t vm_flags = VM_LOCKED;
 
