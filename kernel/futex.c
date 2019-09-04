@@ -549,12 +549,12 @@ get_futex_key(u32 __user *uaddr, int fshared, union futex_key *key, enum futex_a
 	 * Note : We do have to check 'uaddr' is a valid user address,
 	 *        but access_ok() should be faster than find_vma()
 	 */
-	if (!fshared) {
+	// if (!fshared) {
 		key->private.mm = mm;
 		key->private.address = address;
 		get_futex_key_refs(key);  /* implies smp_mb(); (B) */
 		return 0;
-	}
+	// }
 
 again:
 	/* Ignore any VERIFY_READ mapping (futex common case) */
