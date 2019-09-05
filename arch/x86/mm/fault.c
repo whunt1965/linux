@@ -1313,7 +1313,6 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * SMAP and will have the USER bit set so, in all cases, SMAP
 	 * enforcement appears to be consistent with the USER bit.
 	 */
-
 	if (unlikely(cpu_feature_enabled(X86_FEATURE_SMAP) &&
 		     !(hw_error_code & X86_PF_USER) &&
 		     !(regs->flags & X86_EFLAGS_AC)))
@@ -1326,7 +1325,6 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * If we're in an interrupt, have no user context or are running
 	 * in a region with pagefaults disabled then we must not take the fault
 	 */
-	
 	if (unlikely(faulthandler_disabled() || !mm)) {
 		bad_area_nosemaphore(regs, hw_error_code, address);
 		return;
