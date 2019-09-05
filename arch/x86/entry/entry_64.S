@@ -1008,7 +1008,6 @@ idtentry bounds				do_bounds			has_error_code=0
 idtentry invalid_op			do_invalid_op			has_error_code=0
 idtentry device_not_available		do_device_not_available		has_error_code=0
 idtentry double_fault			do_double_fault			has_error_code=1 paranoid=2
-idtentry page_fault			do_page_fault			has_error_code=1
 idtentry coprocessor_segment_overrun	do_coprocessor_segment_overrun	has_error_code=0
 idtentry invalid_TSS			do_invalid_TSS			has_error_code=1
 idtentry segment_not_present		do_segment_not_present		has_error_code=1
@@ -1181,7 +1180,7 @@ idtentry xenint3		do_int3			has_error_code=0
 #endif
 
 idtentry general_protection	do_general_protection	has_error_code=1
-/* idtentry page_fault		do_page_fault		has_error_code=1 */
+idtentry page_fault		do_page_fault		has_error_code=1
 
 #ifdef CONFIG_KVM_GUEST
 idtentry async_page_fault	do_async_page_fault	has_error_code=1
