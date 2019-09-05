@@ -13,8 +13,6 @@
 #define ESTACKS_MEMBERS(guardsize, db2_holesize)\
 	char	DF_stack_guard[guardsize];	\
 	char	DF_stack[EXCEPTION_STKSZ];	\
-	char	PF_stack_guard[guardsize];	\
-	char	PF_stack[EXCEPTION_STKSZ];	\
 	char	NMI_stack_guard[guardsize];	\
 	char	NMI_stack[EXCEPTION_STKSZ];	\
 	char	DB2_stack_guard[guardsize];	\
@@ -42,7 +40,6 @@ struct cea_exception_stacks {
  */
 enum exception_stack_ordering {
 	ESTACK_DF,
-	ESTACK_PF,
 	ESTACK_NMI,
 	ESTACK_DB2,
 	ESTACK_DB1,
