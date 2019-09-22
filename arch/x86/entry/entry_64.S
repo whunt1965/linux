@@ -1862,6 +1862,6 @@ ENTRY(__child_return)
 
 	movq	$0x0, %rax
 	movq	32(%rsp), %rsp
-	call 	stackworker
+	/* call 	stackworker */
 	retq	
 END(__child_return)

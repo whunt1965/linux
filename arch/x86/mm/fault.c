@@ -1325,10 +1325,22 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * If we're in an interrupt, have no user context or are running
 	 * in a region with pagefaults disabled then we must not take the fault
 	 */
-	if (unlikely(faulthandler_disabled() || !mm)) {
+	if (!mm) {
+                bad_area_nosemaphore(regs, hw_error_code, address);
+                return;
+        }
+
+	if (pagefault_disabled()) {
+                bad_area_nosemaphore(regs, hw_error_code, address);
+                return;
+        }
+
+	
+	/* if (preempt_count() != 0) {
 		bad_area_nosemaphore(regs, hw_error_code, address);
 		return;
-	}
+	}*/
+	
 
 	/*
 	 * It's safe to allow irq's after cr2 has been saved and the

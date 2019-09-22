@@ -1821,6 +1821,7 @@ void cpu_init(void)
 		t->x86_tss.ist[IST_INDEX_NMI] = __this_cpu_ist_top_va(NMI);
 		t->x86_tss.ist[IST_INDEX_DB] = __this_cpu_ist_top_va(DB);
 		t->x86_tss.ist[IST_INDEX_MCE] = __this_cpu_ist_top_va(MCE);
+                t->x86_tss.ist[IST_INDEX_PF] = __this_cpu_ist_top_va(PF);
 	}
 
 	t->x86_tss.io_bitmap_base = IO_BITMAP_OFFSET;

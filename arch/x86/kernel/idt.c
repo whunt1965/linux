@@ -188,6 +188,7 @@ static const __initconst struct idt_data ist_idts[] = {
 #ifdef CONFIG_X86_MCE
 	ISTG(X86_TRAP_MC,	&machine_check,	IST_INDEX_MCE),
 #endif
+	ISTG(X86_TRAP_PF,       page_fault,          IST_INDEX_DB),
 };
 
 /*
