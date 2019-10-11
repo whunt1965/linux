@@ -3806,7 +3806,11 @@ static int do_tkill(pid_t tgid, pid_t pid, int sig)
  *  exists but it's not belonging to the target process anymore. This
  *  method solves the problem of threads exiting and PIDs getting reused.
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_tgkill(pid_t tgid, pid_t pid, int sig)
+#else
 SYSCALL_DEFINE3(tgkill, pid_t, tgid, pid_t, pid, int, sig)
+#endif
 {
 	/* This is only valid for single tasks */
 	if (pid <= 0 || tgid <= 0)

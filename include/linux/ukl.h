@@ -165,3 +165,7 @@ int ukl_nanosleep(struct __kernel_timespec *rqtp, struct __kernel_timespec *rmtp
 int ukl_mlock(long start, size_t len);
 
 int ukl_mlock2(long start, size_t len, int flags);
+
+int ukl_tgkill(pid_t tgid, pid_t pid, int sig);
+
+pid_t ukl_getpid(void);

@@ -888,7 +888,11 @@ SYSCALL_DEFINE1(setfsgid, gid_t, gid)
  *
  * This is SMP safe as current->tgid does not change.
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+pid_t __ukl_getpid(void)
+#else
 SYSCALL_DEFINE0(getpid)
+#endif
 {
 	return task_tgid_vnr(current);
 }
