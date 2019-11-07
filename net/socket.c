@@ -2432,8 +2432,12 @@ int __sys_sendmmsg(int fd, struct mmsghdr __user *mmsg, unsigned int vlen,
 	return err;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_sendmmsg(int fd, struct mmsghdr __user *mmsg, unsigned int vlen, unsigned int flags)
+#else
 SYSCALL_DEFINE4(sendmmsg, int, fd, struct mmsghdr __user *, mmsg,
 		unsigned int, vlen, unsigned int, flags)
+#endif
 {
 	return __sys_sendmmsg(fd, mmsg, vlen, flags, true);
 }

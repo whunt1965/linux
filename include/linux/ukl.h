@@ -169,3 +169,5 @@ int ukl_mlock2(long start, size_t len, int flags);
 int ukl_tgkill(pid_t tgid, pid_t pid, int sig);
 
 pid_t ukl_getpid(void);
+
+int ukl_sendmmsg(int fd, struct mmsghdr *mmsg, unsigned int vlen, unsigned int flags);
