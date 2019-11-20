@@ -812,7 +812,11 @@ long do_arch_prctl_64(struct task_struct *task, int option, unsigned long arg2)
 	return ret;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+long __ukl_arch_prctl(int option, unsigned long arg2)
+#else
 SYSCALL_DEFINE2(arch_prctl, int, option, unsigned long, arg2)
+#endif
 {
 	long ret;
 

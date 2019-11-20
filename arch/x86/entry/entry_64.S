@@ -671,7 +671,20 @@ retint_kernel:
 	jnz	1f
 	call	preempt_schedule_irq
 1:
-#endif
+#else /* CONFIG_PREEMPT */
+#ifdef CONFIG_UNIKERNEL_LINUX
+	/* Interrupts are off */
+	btl	$9, EFLAGS(%rsp)                /* were interrupts off? */
+	jnc	1f
+0:	cmpl	$0, PER_CPU_VAR(__preempt_count)
+	jnz	1f
+	cmpl	$1, PER_CPU_VAR(in_application)
+	jnz	1f
+	call	preempt_schedule_irq
+	jmp	0b
+1:
+#endif /* CONFIG_UNIKERNEL_LINUX */
+#endif /* CONFIG_PREEMPT */
 	/*
 	 * The iretq could re-enable interrupts:
 	 */
@@ -1862,6 +1875,5 @@ ENTRY(__child_return)
 
 	movq	$0x0, %rax
 	movq	32(%rsp), %rsp
-	/* call 	stackworker */
 	retq	
 END(__child_return)

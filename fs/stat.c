@@ -269,7 +269,11 @@ SYSCALL_DEFINE2(lstat, const char __user *, filename,
 	return cp_old_stat(&stat, statbuf);
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_fstat(unsigned int fd, struct __old_kernel_stat __user * statbuf)
+#else
 SYSCALL_DEFINE2(fstat, unsigned int, fd, struct __old_kernel_stat __user *, statbuf)
+#endif
 {
 	struct kstat stat;
 	int error = vfs_fstat(fd, &stat);

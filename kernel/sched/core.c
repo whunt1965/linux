@@ -4116,11 +4116,23 @@ EXPORT_SYMBOL_GPL(preempt_schedule_notrace);
 asmlinkage __visible void __sched preempt_schedule_irq(void)
 {
 	enum ctx_state prev_state;
+#ifndef CONFIG_PREEMPT
+#ifdef CONFIG_UNIKERNEL_LINUX
+	if (!this_cpu_read(in_application))
+		return;
+#endif
+#endif
 
 	/* Catch callers which need to be fixed */
 	BUG_ON(preempt_count() || !irqs_disabled());
 
 	prev_state = exception_enter();
+
+#ifndef CONFIG_PREEMPT
+#ifdef CONFIG_UNIKERNEL_LINUX
+	exit_application();
+#endif
+#endif
 
 	do {
 		preempt_disable();
@@ -4130,6 +4142,11 @@ asmlinkage __visible void __sched preempt_schedule_irq(void)
 		sched_preempt_enable_no_resched();
 	} while (need_resched());
 
+#ifndef CONFIG_PREEMPT
+#ifdef CONFIG_UNIKERNEL_LINUX
+	enter_application();
+#endif
+#endif
 	exception_exit(prev_state);
 }
 

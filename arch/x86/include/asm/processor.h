@@ -404,6 +404,11 @@ static inline unsigned long cpu_kernelmode_gs_base(int cpu)
 }
 
 DECLARE_PER_CPU(unsigned int, irq_count);
+#ifdef CONFIG_UNIKERNEL_LINUX
+DECLARE_PER_CPU(int, in_application);
+void enter_application(void);
+void exit_application(void);
+#endif
 extern asmlinkage void ignore_sysret(void);
 
 #if IS_ENABLED(CONFIG_KVM)

@@ -1511,7 +1511,11 @@ int __sys_socket(int family, int type, int protocol)
 	return sock_map_fd(sock, flags & (O_CLOEXEC | O_NONBLOCK));
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_socket(int family, int type, int protocol)
+#else
 SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
+#endif
 {
 	return __sys_socket(family, type, protocol);
 }
@@ -1649,7 +1653,11 @@ int __sys_bind(int fd, struct sockaddr __user *umyaddr, int addrlen)
 	return err;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_bind(int fd, struct sockaddr __user * umyaddr, int addrlen)
+#else
 SYSCALL_DEFINE3(bind, int, fd, struct sockaddr __user *, umyaddr, int, addrlen)
+#endif
 {
 	return __sys_bind(fd, umyaddr, addrlen);
 }
@@ -1681,7 +1689,11 @@ int __sys_listen(int fd, int backlog)
 	return err;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_listen(int fd, int backlog)
+#else
 SYSCALL_DEFINE2(listen, int, fd, int, backlog)
+#endif
 {
 	return __sys_listen(fd, backlog);
 }
@@ -1785,8 +1797,12 @@ SYSCALL_DEFINE4(accept4, int, fd, struct sockaddr __user *, upeer_sockaddr,
 	return __sys_accept4(fd, upeer_sockaddr, upeer_addrlen, flags);
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_accept(int fd, struct sockaddr __user * upeer_sockaddr, int __user * upeer_addrlen)
+#else
 SYSCALL_DEFINE3(accept, int, fd, struct sockaddr __user *, upeer_sockaddr,
 		int __user *, upeer_addrlen)
+#endif
 {
 	return __sys_accept4(fd, upeer_sockaddr, upeer_addrlen, 0);
 }
@@ -1829,8 +1845,12 @@ out:
 	return err;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_connect(int fd, struct sockaddr __user * uservaddr, int addrlen)
+#else
 SYSCALL_DEFINE3(connect, int, fd, struct sockaddr __user *, uservaddr,
 		int, addrlen)
+#endif
 {
 	return __sys_connect(fd, uservaddr, addrlen);
 }
@@ -1953,9 +1973,13 @@ out:
 	return err;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_sendto(int fd, void __user * buff, size_t len, unsigned int flags, struct sockaddr __user * addr, int addr_len)
+#else
 SYSCALL_DEFINE6(sendto, int, fd, void __user *, buff, size_t, len,
 		unsigned int, flags, struct sockaddr __user *, addr,
 		int, addr_len)
+#endif
 {
 	return __sys_sendto(fd, buff, len, flags, addr, addr_len);
 }
@@ -1964,8 +1988,12 @@ SYSCALL_DEFINE6(sendto, int, fd, void __user *, buff, size_t, len,
  *	Send a datagram down a socket.
  */
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_send(int fd, void __user * buff, size_t len, unsigned int flags)
+#else
 SYSCALL_DEFINE4(send, int, fd, void __user *, buff, size_t, len,
 		unsigned int, flags)
+#endif
 {
 	return __sys_sendto(fd, buff, len, flags, NULL, 0);
 }
@@ -2016,9 +2044,13 @@ out:
 	return err;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_recvfrom(int fd, void __user * ubuf, size_t size, unsigned int flags, struct sockaddr __user * addr, int __user * addr_len)
+#else
 SYSCALL_DEFINE6(recvfrom, int, fd, void __user *, ubuf, size_t, size,
 		unsigned int, flags, struct sockaddr __user *, addr,
 		int __user *, addr_len)
+#endif
 {
 	return __sys_recvfrom(fd, ubuf, size, flags, addr, addr_len);
 }
@@ -2027,8 +2059,12 @@ SYSCALL_DEFINE6(recvfrom, int, fd, void __user *, ubuf, size_t, size,
  *	Receive a datagram from a socket.
  */
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_recv(int fd, void __user * ubuf, size_t size, unsigned int flags)
+#else
 SYSCALL_DEFINE4(recv, int, fd, void __user *, ubuf, size_t, size,
 		unsigned int, flags)
+#endif
 {
 	return __sys_recvfrom(fd, ubuf, size, flags, NULL, NULL);
 }
@@ -2090,8 +2126,12 @@ out_put:
 	return err;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_setsockopt(int fd, int level, int optname, char __user * optval, int optlen)
+#else
 SYSCALL_DEFINE5(setsockopt, int, fd, int, level, int, optname,
 		char __user *, optval, int, optlen)
+#endif
 {
 	return __sys_setsockopt(fd, level, optname, optval, optlen);
 }

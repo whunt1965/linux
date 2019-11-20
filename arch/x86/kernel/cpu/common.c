@@ -1617,6 +1617,20 @@ EXPORT_PER_CPU_SYMBOL(current_task);
 DEFINE_PER_CPU(struct irq_stack *, hardirq_stack_ptr);
 DEFINE_PER_CPU(unsigned int, irq_count) __visible = -1;
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+DEFINE_PER_CPU(int, in_application) __visible = 0;
+EXPORT_PER_CPU_SYMBOL(in_application);
+void enter_application(void)
+{
+	this_cpu_write(in_application, 1);
+}
+
+void exit_application(void)
+{
+	this_cpu_write(in_application, 0);
+}
+#endif
+
 DEFINE_PER_CPU(int, __preempt_count) = INIT_PREEMPT_COUNT;
 EXPORT_PER_CPU_SYMBOL(__preempt_count);
 

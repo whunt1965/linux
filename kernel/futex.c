@@ -75,7 +75,7 @@
  * and schedules.
  *
  * The waker side modifies the user space value of the futex and calls
- * futex_wake(). This function computes the hash bucket and acquires the
+ * futex_wake_k(). This function computes the hash bucket and acquires the
  * hash bucket lock. Then it looks for waiters on that futex in the hash
  * bucket and wakes them.
  *
@@ -92,7 +92,7 @@
  *   uval = *futex;
  *                                     *futex = newval;
  *                                     sys_futex(WAKE, futex);
- *                                       futex_wake(futex);
+ *                                       futex_wake_k(futex);
  *                                       if (queue_empty())
  *                                         return;
  *   if (uval == val)
@@ -122,7 +122,7 @@
  *   uval = *futex;                 |
  *                                  |        *futex = newval;
  *                                  |        sys_futex(WAKE, futex);
- *                                  |          futex_wake(futex);
+ *                                  |          futex_wake_k(futex);
  *                                  |
  *                                  `--------> smp_mb(); (B)
  *   if (uval == val)
@@ -1594,7 +1594,7 @@ double_unlock_hb(struct futex_hash_bucket *hb1, struct futex_hash_bucket *hb2)
  * Wake up waiters matching bitset queued on this futex (uaddr).
  */
 static int
-futex_wake(u32 __user *uaddr, unsigned int flags, int nr_wake, u32 bitset)
+futex_wake_k(u32 __user *uaddr, unsigned int flags, int nr_wake, u32 bitset)
 {
 	struct futex_hash_bucket *hb;
 	struct futex_q *this, *next;
@@ -2659,7 +2659,7 @@ static int futex_wait_setup(u32 __user *uaddr, u32 val, unsigned int flags,
 	 * Order is important:
 	 *
 	 *   Userspace waiter: val = var; if (cond(val)) futex_wait(&var, val);
-	 *   Userspace waker:  if (cond(var)) { var = new; futex_wake(&var); }
+	 *   Userspace waker:  if (cond(var)) { var = new; futex_wake_k(&var); }
 	 *
 	 * The basic logical guarantee of a futex is that it blocks ONLY
 	 * if cond(var) is known to be true at the time of blocking, for
@@ -3483,7 +3483,7 @@ retry:
 	 * of interest. Set the OWNER_DIED bit atomically
 	 * via cmpxchg, and if the value had FUTEX_WAITERS
 	 * set, wake up a waiter (if any). (We have to do a
-	 * futex_wake() even if OWNER_DIED is already set -
+	 * futex_wake_k() even if OWNER_DIED is already set -
 	 * to handle the rare but possible case of recursive
 	 * thread-death.) The rest of the cleanup is done in
 	 * userspace.
@@ -3524,7 +3524,7 @@ retry:
 	 * PI futexes happens in exit_pi_state():
 	 */
 	if (!pi && (uval & FUTEX_WAITERS))
-		futex_wake(uaddr, 1, 1, FUTEX_BITSET_MATCH_ANY);
+		futex_wake_k(uaddr, 1, 1, FUTEX_BITSET_MATCH_ANY);
 
 	return 0;
 }
@@ -3652,7 +3652,7 @@ long do_futex(u32 __user *uaddr, int op, u32 val, ktime_t *timeout,
 		val3 = FUTEX_BITSET_MATCH_ANY;
 		/* fall through */
 	case FUTEX_WAKE_BITSET:
-		return futex_wake(uaddr, flags, val, val3);
+		return futex_wake_k(uaddr, flags, val, val3);
 	case FUTEX_REQUEUE:
 		return futex_requeue(uaddr, flags, uaddr2, val, val2, NULL, 0);
 	case FUTEX_CMP_REQUEUE:

@@ -188,13 +188,13 @@ static struct vm_area_struct *remove_vma(struct vm_area_struct *vma)
 	return next;
 }
 
-SYSCALL_DEFINE1(brk, unsigned long, brk)
-{
-       return mybrk(brk);
-}
 static int do_brk_flags(unsigned long addr, unsigned long request, unsigned long flags,
 		struct list_head *uf);
-unsigned long mybrk(unsigned long brk)
+#ifdef CONFIG_UNIKERNEL_LINUX
+unsigned long __ukl_brk(unsigned long brk)
+#else
+SYSCALL_DEFINE1(brk, unsigned long, brk)
+#endif
 {
 	unsigned long retval;
 	unsigned long newbrk, oldbrk, origbrk;
@@ -2876,7 +2876,11 @@ int vm_munmap(unsigned long start, size_t len)
 }
 EXPORT_SYMBOL(vm_munmap);
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_munmap(unsigned long addr, size_t len)
+#else
 SYSCALL_DEFINE2(munmap, unsigned long, addr, size_t, len)
+#endif
 {
 	profile_munmap(addr);
 	return __vm_munmap(addr, len, true);

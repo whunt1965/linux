@@ -188,7 +188,11 @@ int do_set_thread_area(struct task_struct *p, int idx,
 	return 0;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_set_thread_area(struct user_desc __user * u_info)
+#else
 SYSCALL_DEFINE1(set_thread_area, struct user_desc __user *, u_info)
+#endif
 {
 	return do_set_thread_area(current, -1, u_info, 1);
 }
@@ -240,7 +244,11 @@ int do_get_thread_area(struct task_struct *p, int idx,
 	return 0;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_get_thread_area(struct user_desc __user * u_info)
+#else
 SYSCALL_DEFINE1(get_thread_area, struct user_desc __user *, u_info)
+#endif
 {
 	return do_get_thread_area(current, -1, u_info);
 }

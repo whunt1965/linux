@@ -576,8 +576,12 @@ out:
 	return error;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_mprotect(unsigned long start, size_t len, unsigned long prot)
+#else
 SYSCALL_DEFINE3(mprotect, unsigned long, start, size_t, len,
 		unsigned long, prot)
+#endif
 {
 	return do_mprotect_pkey(start, len, prot, -1);
 }
