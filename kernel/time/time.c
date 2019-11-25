@@ -60,7 +60,7 @@ EXPORT_SYMBOL(sys_tz);
  * architectures that need it).
  */
 #ifdef CONFIG_UNIKERNEL_LINUX
-time_t _ukl_time (time_t *tloc)
+time_t __ukl_time (time_t *tloc)
 #else
 SYSCALL_DEFINE1(time, time_t __user *, tloc)
 #endif
@@ -142,7 +142,7 @@ SYSCALL_DEFINE1(stime32, old_time32_t __user *, tptr)
 #endif
 
 #ifdef CONFIG_UNIKERNEL_LINUX
-int _ukl_gettimeofday(struct timeval* tv, struct timezone* tz)
+int __ukl_gettimeofday(struct timeval* tv, struct timezone* tz)
 #else
 SYSCALL_DEFINE2(gettimeofday, struct timeval __user *, tv,
 		struct timezone __user *, tz)
