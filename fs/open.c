@@ -1080,7 +1080,11 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 	return fd;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+long __ukl_open(const char __user * filename, int flags, umode_t mode)
+#else
 SYSCALL_DEFINE3(open, const char __user *, filename, int, flags, umode_t, mode)
+#endif
 {
 	if (force_o_largefile())
 		flags |= O_LARGEFILE;
@@ -1161,7 +1165,11 @@ EXPORT_SYMBOL(filp_close);
  * releasing the fd. This ensures that one clone task can't release
  * an fd while another clone is opening it.
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_close(unsigned int fd)
+#else
 SYSCALL_DEFINE1(close, unsigned int, fd)
+#endif
 {
 	int retval = __close_fd(current->files, fd);
 

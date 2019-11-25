@@ -592,7 +592,11 @@ ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
 	return ret;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+ssize_t __ukl_read(unsigned int fd, char __user * buf, size_t count)
+#else
 SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
+#endif
 {
 	return ksys_read(fd, buf, count);
 }
@@ -617,8 +621,12 @@ ssize_t ksys_write(unsigned int fd, const char __user *buf, size_t count)
 	return ret;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+ssize_t __ukl_write(unsigned int fd, const char __user * buf, size_t count)
+#else
 SYSCALL_DEFINE3(write, unsigned int, fd, const char __user *, buf,
 		size_t, count)
+#endif
 {
 	return ksys_write(fd, buf, count);
 }

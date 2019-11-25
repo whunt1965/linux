@@ -72,102 +72,55 @@
 #include <linux/futex.h>
 #include <linux/sched/mm.h>
 
-ssize_t ukl_write(int fds, const void* buf, size_t count);
+void enter_ukl(void);
+void exit_ukl(void);
+void printukl(const char *fmt, ...);
 
+ssize_t ukl_write(int fd, const void* buf, size_t count);
 ssize_t ukl_read(int fd, const void* buf, size_t count);
-
-long ukl_open(char *filename);
-
+long ukl_open(const char* filename, int flags, unsigned short mode);
 long ukl_close(int fd);
-
-//write all malloc interfaces
-
-void * ukl_malloc(size_t size); // use kmalloc here;
-
-int ukl_utsname(struct new_utsname *name); // one more wrapper, not very important right now
-
-int ukl_exit_group(int error_code); // should not exit, machine should idle
-
+void ukl_exit_group(int error_code);
 int ukl_socket(int family, int type, int protocol);
-
 int ukl_bind(int fd, struct sockaddr __user *umyaddr, int addrlen);
-
 int ukl_connect(int fd, struct sockaddr __user *uservaddr, int addrlen);
-
 int ukl_listen(int fd, int backlog);
-
 int ukl_accept(int fd, struct sockaddr *upeer_sockaddr, int *upeer_addrlen);
-
 int ukl_ioctl(int fd, int cmd, long arg);
-
 int ukl_recvfrom(int fd, void __user *ubuf, size_t size, unsigned int flags, struct sockaddr __user *addr, int __user *addr_len);
-
 int ukl_sendto(int fd, void *buff, size_t len, unsigned int flags, struct sockaddr *addr, int addr_len);
-
+int ukl_recv(int fd, void __user *ubuf, size_t size, unsigned int flags);
+int ukl_send(int fd, void *buff, size_t len, unsigned int flags);
 int ukl_setsockopt(int fd, int level, int optname, char *optval, int optlen);
-
 long ukl_arch_prctl(int option, unsigned long arg2);
-
 int ukl_get_thread_area(struct user_desc __user *u_info);
-
 int ukl_set_thread_area(struct user_desc __user *u_info);
-
 long ukl_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags, unsigned long fd, unsigned long off);
-
-// int ukl_uname(struct old_utsname * name);
-
-int ukl_prlimit64(pid_t pid, unsigned int resource,	const struct rlimit64 * new_rlim, struct rlimit64 * old_rlim);
-
-unsigned long ukl_brk(unsigned long brk);
-
-int ukl_fstat(unsigned int fd, struct stat __user * statbuf);
-
-int ukl_mprotect(unsigned long start, size_t len, unsigned long prot);
-
-long ukl_clone(unsigned long clone_flags, unsigned long newsp, int * parent_tidptr, unsigned long tls, int * child_tidptr);
-
-int munmap(unsigned long addr, size_t len);
-
-int ukl_recv(int fd, void __user *ubuf, size_t size, unsigned int flags, struct sockaddr __user *addr, int __user *addr_len);
-
-int ukl_send(int fd, void *buff, size_t len, unsigned int flags, struct sockaddr *addr, int addr_len);
-
-int ukl_set_tid_address(int * ptr);
-
+int ukl_set_tid_address(int * tidptr);
 int ukl_set_robust_list(struct robust_list_head * head, size_t len);
-
 int ukl_rt_sigprocmask(int how, sigset_t * nset,  sigset_t * oset, size_t sigsetsize);
-
 int ukl_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize);
-
-long ukl_futex(u32 * uaddr, int op, u32 val, struct __kernel_timespec * utime, u32 * uaddr2, u32 val3);
-
+int ukl_prlimit64(pid_t pid, unsigned int resource, const struct rlimit64 * new_rlim, struct rlimit64 * old_rlim);
+unsigned long ukl_brk(unsigned long brk);
+int ukl_fstat(unsigned int fd, struct stat __user * statbuf);
+int ukl_mprotect(unsigned long start, size_t len, unsigned long prot);
+long ukl_clone(unsigned long clone_flags, unsigned long newsp, int * parent_tidptr, unsigned long tls, int * child_tidptr);
+int ukl_munmap(unsigned long addr, size_t len);
+void ukl_exit(int error_code);
+long ukl_futex(unsigned int  * uaddr, int op, unsigned int  val, struct __kernel_timespec * utime, unsigned int  * uaddr2, unsigned int  val3);
 int ukl_setrlimit (unsigned int  resource, const struct rlimit* rlim);
-
 int ukl_clock_gettime(const clockid_t which_clock, struct __kernel_timespec * tp);
-
 int ukl_gettimeofday(struct timeval* tv, struct timezone* tz);
-
 int ukl_epoll_create1(int flags);
-
-time_t ukl_time (time_t *t);
-
-int ukl_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg);
-
 int ukl_pipe2(int* fildes, int flags);
-
+time_t ukl_time (time_t *t);
+int ukl_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg);
 int ukl_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event);
-
 int ukl_epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout);
-
 int ukl_nanosleep(struct __kernel_timespec *rqtp, struct __kernel_timespec *rmtp);
-
 int ukl_mlock(long start, size_t len);
-
 int ukl_mlock2(long start, size_t len, int flags);
-
 int ukl_tgkill(pid_t tgid, pid_t pid, int sig);
-
 pid_t ukl_getpid(void);
-
 int ukl_sendmmsg(int fd, struct mmsghdr *mmsg, unsigned int vlen, unsigned int flags);
+

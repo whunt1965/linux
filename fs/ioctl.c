@@ -715,7 +715,11 @@ int ksys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg)
 	return error;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg)
+#else
 SYSCALL_DEFINE3(ioctl, unsigned int, fd, unsigned int, cmd, unsigned long, arg)
+#endif
 {
 	return ksys_ioctl(fd, cmd, arg);
 }

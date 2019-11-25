@@ -1023,7 +1023,7 @@ SYSCALL_DEFINE2(clock_settime, const clockid_t, which_clock,
 }
 
 #ifdef CONFIG_UNIKERNEL_LINUX
-int _ukl_clock_gettime(const clockid_t which_clock, struct __kernel_timespec * tp)
+int __ukl_clock_gettime(const clockid_t which_clock, struct __kernel_timespec * tp)
 #else
 SYSCALL_DEFINE2(clock_gettime, const clockid_t, which_clock,
 		struct __kernel_timespec __user *, tp)

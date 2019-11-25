@@ -1668,7 +1668,11 @@ SYSCALL_DEFINE4(prlimit64, pid_t, pid, unsigned int, resource,
 	return ret;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_setrlimit(unsigned int resource, struct rlimit __user * rlim)
+#else
 SYSCALL_DEFINE2(setrlimit, unsigned int, resource, struct rlimit __user *, rlim)
+#endif
 {
 	struct rlimit new_rlim;
 

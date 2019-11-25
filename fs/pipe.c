@@ -868,7 +868,7 @@ static int do_pipe2(int __user *fildes, int flags)
 }
 
 #ifdef CONFIG_UNIKERNEL_LINUX
-int _ukl_pipe2(int* fildes, int flags)
+int __ukl_pipe2(int* fildes, int flags)
 #else
 SYSCALL_DEFINE2(pipe2, int __user *, fildes, int, flags)
 #endif

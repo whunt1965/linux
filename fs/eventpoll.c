@@ -2082,7 +2082,7 @@ out_free_ep:
 	return error;
 }
 #ifdef CONFIG_UNIKERNEL_LINUX
-int _ukl_epoll_create1(int flags)
+int __ukl_epoll_create1(int flags)
 #else
 SYSCALL_DEFINE1(epoll_create1, int, flags)
 #endif
@@ -2104,7 +2104,7 @@ SYSCALL_DEFINE1(epoll_create, int, size)
  * file descriptors inside the interest set.
  */
 #ifdef CONFIG_UNIKERNEL_LINUX
-int _ukl_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event)
+int __ukl_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event)
 #else
 SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 		struct epoll_event __user *, event)
@@ -2305,7 +2305,7 @@ error_fput:
 	return error;
 }
 #ifdef CONFIG_UNIKERNEL_LINUX
-int _ukl_epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout)
+int __ukl_epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout)
 #else
 SYSCALL_DEFINE4(epoll_wait, int, epfd, struct epoll_event __user *, events,
 		int, maxevents, int, timeout)

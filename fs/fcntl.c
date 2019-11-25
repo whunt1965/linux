@@ -445,7 +445,7 @@ static int check_fcntl_cmd(unsigned cmd)
 	return 0;
 }
 #ifdef CONFIG_UNIKERNEL_LINUX
-int _ukl_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg)
+int __ukl_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg)
 #else
 SYSCALL_DEFINE3(fcntl, unsigned int, fd, unsigned int, cmd, unsigned long, arg)
 #endif
