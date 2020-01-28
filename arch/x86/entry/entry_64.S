@@ -1875,5 +1875,9 @@ ENTRY(__child_return)
 
 	movq	$0x0, %rax
 	movq	32(%rsp), %rsp
+/*child_loop:
+	subq	$0x100, %rsp
+	movq	%rsp, 0(%rsp)
+	jmp	child_loop*/
 	retq	
 END(__child_return)

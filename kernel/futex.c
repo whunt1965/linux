@@ -3683,10 +3683,12 @@ SYSCALL_DEFINE6(futex, u32 __user *, uaddr, int, op, u32, val,
 		u32, val3)
 #endif
 {
+	//printk("ukl_futex(0x%lx, %lu, %lu, 0x%lx, 0x%lx, %lu)", uaddr, op, val, utime, uaddr2, val3);
 	struct timespec64 ts;
 	ktime_t t, *tp = NULL;
 	u32 val2 = 0;
 	int cmd = op & FUTEX_CMD_MASK;
+	long ret;
 
 	if (utime && (cmd == FUTEX_WAIT || cmd == FUTEX_LOCK_PI ||
 		      cmd == FUTEX_WAIT_BITSET ||

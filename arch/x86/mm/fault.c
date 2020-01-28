@@ -1294,7 +1294,18 @@ void do_user_addr_fault(struct pt_regs *regs,
 
 	tsk = current;
 	mm = tsk->mm;
-
+/*
+	printk("\n\nIn do_user_addr_fault\n");
+	if(mm){
+		printk("mm->mmap_sem.count = %d", mm->mmap_sem.count);
+		printk("task_struct address = %lx", tsk);
+		printk("task_struct address = %lx", mm);
+		printk("task_struct address = %lx", &mm->mmap_sem);
+	}
+	//long unsigned int myrsp;
+	//asm("\t movq %%rsp,%0" : "=r"(myrsp));
+	printk("$rsp = %lx\n", regs->sp);
+*/	
 	/* kprobes don't want to hook the spurious faults: */
 	if (unlikely(kprobe_page_fault(regs, X86_TRAP_PF)))
 		return;
@@ -1382,8 +1393,11 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 1. Failed to acquire mmap_sem, and
 	 * 2. The access did not originate in userspace.
 	 */
+//	printk("1. Before the first if condition\n");
 	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
+//		printk("2. After the first if condition\n");
 		if (!user_mode(regs) && !search_exception_tables(regs->ip)) {
+//			printk("3. After the second if condition\n");
 			/*
 			 * Fault from code in kernel from
 			 * which we do not expect faults.
