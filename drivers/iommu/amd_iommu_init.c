@@ -23,6 +23,8 @@
 #include <linux/mem_encrypt.h>
 #include <asm/pci-direct.h>
 #include <asm/iommu.h>
+#include <asm/apic.h>
+#include <asm/msidef.h>
 #include <asm/gart.h>
 #include <asm/x86_init.h>
 #include <asm/iommu_table.h>
@@ -30,6 +32,7 @@
 #include <asm/irq_remapping.h>
 
 #include <linux/crash_dump.h>
+#include "amd_iommu.h"
 #include "amd_iommu_proto.h"
 #include "amd_iommu_types.h"
 #include "irq_remapping.h"
@@ -1000,7 +1003,7 @@ static void __init set_dev_entry_from_acpi(struct amd_iommu *iommu,
 	set_iommu_for_device(iommu, devid);
 }
 
-static int __init add_special_device(u8 type, u8 id, u16 *devid, bool cmd_line)
+int __init add_special_device(u8 type, u8 id, u16 *devid, bool cmd_line)
 {
 	struct devid_map *entry;
 	struct list_head *list;
@@ -1150,6 +1153,8 @@ static int __init init_iommu_from_acpi(struct amd_iommu *iommu,
 	ret = add_early_maps();
 	if (ret)
 		return ret;
+
+	amd_iommu_apply_ivrs_quirks();
 
 	/*
 	 * First save the recommended feature enable bits from ACPI
@@ -1650,27 +1655,39 @@ static int iommu_pc_get_set_reg(struct amd_iommu *iommu, u8 bank, u8 cntr,
 static void init_iommu_perf_ctr(struct amd_iommu *iommu)
 {
 	struct pci_dev *pdev = iommu->dev;
-	u64 val = 0xabcd, val2 = 0;
+	u64 val = 0xabcd, val2 = 0, save_reg = 0;
 
 	if (!iommu_feature(iommu, FEATURE_PC))
 		return;
 
 	amd_iommu_pc_present = true;
 
+	/* save the value to restore, if writable */
+	if (iommu_pc_get_set_reg(iommu, 0, 0, 0, &save_reg, false))
+		goto pc_false;
+
 	/* Check if the performance counters can be written to */
 	if ((iommu_pc_get_set_reg(iommu, 0, 0, 0, &val, true)) ||
 	    (iommu_pc_get_set_reg(iommu, 0, 0, 0, &val2, false)) ||
-	    (val != val2)) {
-		pci_err(pdev, "Unable to write to IOMMU perf counter.\n");
-		amd_iommu_pc_present = false;
-		return;
-	}
+	    (val != val2))
+		goto pc_false;
+
+	/* restore */
+	if (iommu_pc_get_set_reg(iommu, 0, 0, 0, &save_reg, true))
+		goto pc_false;
 
 	pci_info(pdev, "IOMMU performance counters supported\n");
 
 	val = readl(iommu->mmio_base + MMIO_CNTR_CONF_OFFSET);
 	iommu->max_banks = (u8) ((val >> 12) & 0x3f);
 	iommu->max_counters = (u8) ((val >> 7) & 0xf);
+
+	return;
+
+pc_false:
+	pci_err(pdev, "Unable to read/write to IOMMU perf counter.\n");
+	amd_iommu_pc_present = false;
+	return;
 }
 
 static ssize_t amd_iommu_show_cap(struct device *dev,
@@ -1920,6 +1937,90 @@ static int iommu_setup_msi(struct amd_iommu *iommu)
 	return 0;
 }
 
+#define XT_INT_DEST_MODE(x)	(((x) & 0x1ULL) << 2)
+#define XT_INT_DEST_LO(x)	(((x) & 0xFFFFFFULL) << 8)
+#define XT_INT_VEC(x)		(((x) & 0xFFULL) << 32)
+#define XT_INT_DEST_HI(x)	((((x) >> 24) & 0xFFULL) << 56)
+
+/**
+ * Setup the IntCapXT registers with interrupt routing information
+ * based on the PCI MSI capability block registers, accessed via
+ * MMIO MSI address low/hi and MSI data registers.
+ */
+static void iommu_update_intcapxt(struct amd_iommu *iommu)
+{
+	u64 val;
+	u32 addr_lo = readl(iommu->mmio_base + MMIO_MSI_ADDR_LO_OFFSET);
+	u32 addr_hi = readl(iommu->mmio_base + MMIO_MSI_ADDR_HI_OFFSET);
+	u32 data    = readl(iommu->mmio_base + MMIO_MSI_DATA_OFFSET);
+	bool dm     = (addr_lo >> MSI_ADDR_DEST_MODE_SHIFT) & 0x1;
+	u32 dest    = ((addr_lo >> MSI_ADDR_DEST_ID_SHIFT) & 0xFF);
+
+	if (x2apic_enabled())
+		dest |= MSI_ADDR_EXT_DEST_ID(addr_hi);
+
+	val = XT_INT_VEC(data & 0xFF) |
+	      XT_INT_DEST_MODE(dm) |
+	      XT_INT_DEST_LO(dest) |
+	      XT_INT_DEST_HI(dest);
+
+	/**
+	 * Current IOMMU implemtation uses the same IRQ for all
+	 * 3 IOMMU interrupts.
+	 */
+	writeq(val, iommu->mmio_base + MMIO_INTCAPXT_EVT_OFFSET);
+	writeq(val, iommu->mmio_base + MMIO_INTCAPXT_PPR_OFFSET);
+	writeq(val, iommu->mmio_base + MMIO_INTCAPXT_GALOG_OFFSET);
+}
+
+static void _irq_notifier_notify(struct irq_affinity_notify *notify,
+				 const cpumask_t *mask)
+{
+	struct amd_iommu *iommu;
+
+	for_each_iommu(iommu) {
+		if (iommu->dev->irq == notify->irq) {
+			iommu_update_intcapxt(iommu);
+			break;
+		}
+	}
+}
+
+static void _irq_notifier_release(struct kref *ref)
+{
+}
+
+static int iommu_init_intcapxt(struct amd_iommu *iommu)
+{
+	int ret;
+	struct irq_affinity_notify *notify = &iommu->intcapxt_notify;
+
+	/**
+	 * IntCapXT requires XTSup=1, which can be inferred
+	 * amd_iommu_xt_mode.
+	 */
+	if (amd_iommu_xt_mode != IRQ_REMAP_X2APIC_MODE)
+		return 0;
+
+	/**
+	 * Also, we need to setup notifier to update the IntCapXT registers
+	 * whenever the irq affinity is changed from user-space.
+	 */
+	notify->irq = iommu->dev->irq;
+	notify->notify = _irq_notifier_notify,
+	notify->release = _irq_notifier_release,
+	ret = irq_set_affinity_notifier(iommu->dev->irq, notify);
+	if (ret) {
+		pr_err("Failed to register irq affinity notifier (devid=%#x, irq %d)\n",
+		       iommu->devid, iommu->dev->irq);
+		return ret;
+	}
+
+	iommu_update_intcapxt(iommu);
+	iommu_feature_enable(iommu, CONTROL_INTCAPXT_EN);
+	return ret;
+}
+
 static int iommu_init_msi(struct amd_iommu *iommu)
 {
 	int ret;
@@ -1936,6 +2037,10 @@ static int iommu_init_msi(struct amd_iommu *iommu)
 		return ret;
 
 enable_faults:
+	ret = iommu_init_intcapxt(iommu);
+	if (ret)
+		return ret;
+
 	iommu_feature_enable(iommu, CONTROL_EVT_INT_EN);
 
 	if (iommu->ppr_log != NULL)

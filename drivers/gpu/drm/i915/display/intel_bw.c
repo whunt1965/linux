@@ -6,7 +6,7 @@
 #include <drm/drm_atomic_state_helper.h>
 
 #include "intel_bw.h"
-#include "intel_drv.h"
+#include "intel_display_types.h"
 #include "intel_sideband.h"
 
 /* Parameters for Qclk Geyserville (QGV) */
@@ -35,28 +35,54 @@ static int icl_pcode_read_mem_global_info(struct drm_i915_private *dev_priv,
 	if (ret)
 		return ret;
 
-	switch (val & 0xf) {
-	case 0:
-		qi->dram_type = INTEL_DRAM_DDR4;
-		break;
-	case 1:
-		qi->dram_type = INTEL_DRAM_DDR3;
-		break;
-	case 2:
-		qi->dram_type = INTEL_DRAM_LPDDR3;
-		break;
-	case 3:
-		qi->dram_type = INTEL_DRAM_LPDDR3;
-		break;
-	default:
-		MISSING_CASE(val & 0xf);
-		break;
+	if (IS_GEN(dev_priv, 12)) {
+		switch (val & 0xf) {
+		case 0:
+			qi->dram_type = INTEL_DRAM_DDR4;
+			break;
+		case 3:
+			qi->dram_type = INTEL_DRAM_LPDDR4;
+			break;
+		case 4:
+			qi->dram_type = INTEL_DRAM_DDR3;
+			break;
+		case 5:
+			qi->dram_type = INTEL_DRAM_LPDDR3;
+			break;
+		default:
+			MISSING_CASE(val & 0xf);
+			break;
+		}
+	} else if (IS_GEN(dev_priv, 11)) {
+		switch (val & 0xf) {
+		case 0:
+			qi->dram_type = INTEL_DRAM_DDR4;
+			break;
+		case 1:
+			qi->dram_type = INTEL_DRAM_DDR3;
+			break;
+		case 2:
+			qi->dram_type = INTEL_DRAM_LPDDR3;
+			break;
+		case 3:
+			qi->dram_type = INTEL_DRAM_LPDDR4;
+			break;
+		default:
+			MISSING_CASE(val & 0xf);
+			break;
+		}
+	} else {
+		MISSING_CASE(INTEL_GEN(dev_priv));
+		qi->dram_type = INTEL_DRAM_LPDDR3; /* Conservative default */
 	}
 
 	qi->num_channels = (val & 0xf0) >> 4;
 	qi->num_points = (val & 0xf00) >> 8;
 
-	qi->t_bl = qi->dram_type == INTEL_DRAM_DDR4 ? 4 : 8;
+	if (IS_GEN(dev_priv, 12))
+		qi->t_bl = qi->dram_type == INTEL_DRAM_DDR4 ? 4 : 16;
+	else if (IS_GEN(dev_priv, 11))
+		qi->t_bl = qi->dram_type == INTEL_DRAM_DDR4 ? 4 : 8;
 
 	return 0;
 }
@@ -65,7 +91,7 @@ static int icl_pcode_read_qgv_point_info(struct drm_i915_private *dev_priv,
 					 struct intel_qgv_point *sp,
 					 int point)
 {
-	u32 val = 0, val2;
+	u32 val = 0, val2 = 0;
 	int ret;
 
 	ret = sandybridge_pcode_read(dev_priv,
@@ -132,20 +158,25 @@ static int icl_sagv_max_dclk(const struct intel_qgv_info *qi)
 }
 
 struct intel_sa_info {
-	u8 deburst, mpagesize, deprogbwlimit, displayrtids;
+	u16 displayrtids;
+	u8 deburst, deprogbwlimit;
 };
 
 static const struct intel_sa_info icl_sa_info = {
 	.deburst = 8,
-	.mpagesize = 16,
 	.deprogbwlimit = 25, /* GB/s */
 	.displayrtids = 128,
 };
 
-static int icl_get_bw_info(struct drm_i915_private *dev_priv)
+static const struct intel_sa_info tgl_sa_info = {
+	.deburst = 16,
+	.deprogbwlimit = 34, /* GB/s */
+	.displayrtids = 256,
+};
+
+static int icl_get_bw_info(struct drm_i915_private *dev_priv, const struct intel_sa_info *sa)
 {
 	struct intel_qgv_info qi = {};
-	const struct intel_sa_info *sa = &icl_sa_info;
 	bool is_y_tile = true; /* assume y tile may be used */
 	int num_channels;
 	int deinterleave;
@@ -178,6 +209,8 @@ static int icl_get_bw_info(struct drm_i915_private *dev_priv)
 		clpchgroup = (sa->deburst * deinterleave / num_channels) << i;
 		bi->num_planes = (ipqdepth - clpchgroup) / clpchgroup + 1;
 
+		bi->num_qgv_points = qi.num_points;
+
 		for (j = 0; j < qi.num_points; j++) {
 			const struct intel_qgv_point *sp = &qi.points[j];
 			int ct, bw;
@@ -195,7 +228,7 @@ static int icl_get_bw_info(struct drm_i915_private *dev_priv)
 			bi->deratedbw[j] = min(maxdebw,
 					       bw * 9 / 10); /* 90% */
 
-			DRM_DEBUG_KMS("BW%d / QGV %d: num_planes=%d deratedbw=%d\n",
+			DRM_DEBUG_KMS("BW%d / QGV %d: num_planes=%d deratedbw=%u\n",
 				      i, j, bi->num_planes, bi->deratedbw[j]);
 		}
 
@@ -211,13 +244,16 @@ static unsigned int icl_max_bw(struct drm_i915_private *dev_priv,
 {
 	int i;
 
-	/* Did we initialize the bw limits successfully? */
-	if (dev_priv->max_bw[0].num_planes == 0)
-		return UINT_MAX;
-
 	for (i = 0; i < ARRAY_SIZE(dev_priv->max_bw); i++) {
 		const struct intel_bw_info *bi =
 			&dev_priv->max_bw[i];
+
+		/*
+		 * Pcode will not expose all QGV points when
+		 * SAGV is forced to off/min/med/max.
+		 */
+		if (qgv_point >= bi->num_qgv_points)
+			return UINT_MAX;
 
 		if (num_planes >= bi->num_planes)
 			return bi->deratedbw[qgv_point];
@@ -228,14 +264,16 @@ static unsigned int icl_max_bw(struct drm_i915_private *dev_priv,
 
 void intel_bw_init_hw(struct drm_i915_private *dev_priv)
 {
-	if (IS_GEN(dev_priv, 11))
-		icl_get_bw_info(dev_priv);
+	if (IS_GEN(dev_priv, 12))
+		icl_get_bw_info(dev_priv, &tgl_sa_info);
+	else if (IS_GEN(dev_priv, 11))
+		icl_get_bw_info(dev_priv, &icl_sa_info);
 }
 
 static unsigned int intel_max_data_rate(struct drm_i915_private *dev_priv,
 					int num_planes)
 {
-	if (IS_GEN(dev_priv, 11))
+	if (INTEL_GEN(dev_priv) >= 11)
 		/*
 		 * FIXME with SAGV disabled maybe we can assume
 		 * point 1 will always be used? Seems to match
@@ -315,6 +353,20 @@ static unsigned int intel_bw_data_rate(struct drm_i915_private *dev_priv,
 		data_rate += bw_state->data_rate[pipe];
 
 	return data_rate;
+}
+
+static struct intel_bw_state *
+intel_atomic_get_bw_state(struct intel_atomic_state *state)
+{
+	struct drm_i915_private *dev_priv = to_i915(state->base.dev);
+	struct drm_private_state *bw_state;
+
+	bw_state = drm_atomic_get_private_obj_state(&state->base,
+						    &dev_priv->bw_obj);
+	if (IS_ERR(bw_state))
+		return ERR_CAST(bw_state);
+
+	return to_intel_bw_state(bw_state);
 }
 
 int intel_bw_atomic_check(struct intel_atomic_state *state)

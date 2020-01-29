@@ -6,10 +6,13 @@
  */
 
 #include <linux/sort.h>
+
 #include <drm/drm_mode.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_flip_work.h>
+#include <drm/drm_fourcc.h>
 #include <drm/drm_probe_helper.h>
+#include <drm/drm_vblank.h>
 
 #include "mdp5_kms.h"
 
@@ -211,7 +214,6 @@ static void blend_setup(struct drm_crtc *crtc)
 	struct mdp5_pipeline *pipeline = &mdp5_cstate->pipeline;
 	struct mdp5_kms *mdp5_kms = get_kms(crtc);
 	struct drm_plane *plane;
-	const struct mdp5_cfg_hw *hw_cfg;
 	struct mdp5_plane_state *pstate, *pstates[STAGE_MAX + 1] = {NULL};
 	const struct mdp_format *format;
 	struct mdp5_hw_mixer *mixer = pipeline->mixer;
@@ -228,8 +230,6 @@ static void blend_setup(struct drm_crtc *crtc)
 	u32 mixer_op_mode = 0;
 	u32 val;
 #define blender(stage)	((stage) - STAGE0)
-
-	hw_cfg = mdp5_cfg_get_hw_config(mdp5_kms->cfg);
 
 	spin_lock_irqsave(&mdp5_crtc->lm_lock, flags);
 
@@ -439,6 +439,18 @@ static void mdp5_crtc_atomic_disable(struct drm_crtc *crtc,
 	mdp5_crtc->enabled = false;
 }
 
+static void mdp5_crtc_vblank_on(struct drm_crtc *crtc)
+{
+	struct mdp5_crtc_state *mdp5_cstate = to_mdp5_crtc_state(crtc->state);
+	struct mdp5_interface *intf = mdp5_cstate->pipeline.intf;
+	u32 count;
+
+	count = intf->mode == MDP5_INTF_DSI_MODE_COMMAND ? 0 : 0xffffffff;
+	drm_crtc_set_max_vblank_count(crtc, count);
+
+	drm_crtc_vblank_on(crtc);
+}
+
 static void mdp5_crtc_atomic_enable(struct drm_crtc *crtc,
 				    struct drm_crtc_state *old_state)
 {
@@ -475,7 +487,7 @@ static void mdp5_crtc_atomic_enable(struct drm_crtc *crtc,
 	}
 
 	/* Restore vblank irq handling after power is enabled */
-	drm_crtc_vblank_on(crtc);
+	mdp5_crtc_vblank_on(crtc);
 
 	mdp5_crtc_mode_set_nofb(crtc);
 
@@ -1028,6 +1040,8 @@ static void mdp5_crtc_reset(struct drm_crtc *crtc)
 		mdp5_crtc_destroy_state(crtc, crtc->state);
 
 	__drm_atomic_helper_crtc_reset(crtc, &mdp5_cstate->base);
+
+	drm_crtc_vblank_reset(crtc);
 }
 
 static const struct drm_crtc_funcs mdp5_crtc_funcs = {

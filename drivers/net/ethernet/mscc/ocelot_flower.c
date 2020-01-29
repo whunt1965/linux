@@ -10,14 +10,8 @@
 
 struct ocelot_port_block {
 	struct ocelot_acl_block *block;
-	struct ocelot_port *port;
+	struct ocelot_port_private *priv;
 };
-
-static u16 get_prio(u32 prio)
-{
-	/* prio starts from 0x1000 while the ids starts from 0 */
-	return prio >> 16;
-}
 
 static int ocelot_flower_parse_action(struct flow_cls_offload *f,
 				      struct ocelot_ace_rule *rule)
@@ -168,7 +162,7 @@ static int ocelot_flower_parse(struct flow_cls_offload *f,
 	}
 
 finished_key_parsing:
-	ocelot_rule->prio = get_prio(f->common.prio);
+	ocelot_rule->prio = f->common.prio;
 	ocelot_rule->id = f->cookie;
 	return ocelot_flower_parse_action(f, ocelot_rule);
 }
@@ -183,8 +177,8 @@ struct ocelot_ace_rule *ocelot_ace_rule_create(struct flow_cls_offload *f,
 	if (!rule)
 		return NULL;
 
-	rule->port = block->port;
-	rule->chip_port = block->port->chip_port;
+	rule->port = &block->priv->port;
+	rule->chip_port = block->priv->chip_port;
 	return rule;
 }
 
@@ -208,7 +202,7 @@ static int ocelot_flower_replace(struct flow_cls_offload *f,
 	if (ret)
 		return ret;
 
-	port_block->port->tc.offload_cnt++;
+	port_block->priv->tc.offload_cnt++;
 	return 0;
 }
 
@@ -218,15 +212,15 @@ static int ocelot_flower_destroy(struct flow_cls_offload *f,
 	struct ocelot_ace_rule rule;
 	int ret;
 
-	rule.prio = get_prio(f->common.prio);
-	rule.port = port_block->port;
+	rule.prio = f->common.prio;
+	rule.port = &port_block->priv->port;
 	rule.id = f->cookie;
 
 	ret = ocelot_ace_rule_offload_del(&rule);
 	if (ret)
 		return ret;
 
-	port_block->port->tc.offload_cnt--;
+	port_block->priv->tc.offload_cnt--;
 	return 0;
 }
 
@@ -236,8 +230,8 @@ static int ocelot_flower_stats_update(struct flow_cls_offload *f,
 	struct ocelot_ace_rule rule;
 	int ret;
 
-	rule.prio = get_prio(f->common.prio);
-	rule.port = port_block->port;
+	rule.prio = f->common.prio;
+	rule.port = &port_block->priv->port;
 	rule.id = f->cookie;
 	ret = ocelot_ace_rule_stats_update(&rule);
 	if (ret)
@@ -267,7 +261,7 @@ static int ocelot_setup_tc_block_cb_flower(enum tc_setup_type type,
 {
 	struct ocelot_port_block *port_block = cb_priv;
 
-	if (!tc_cls_can_offload_and_chain0(port_block->port->dev, type_data))
+	if (!tc_cls_can_offload_and_chain0(port_block->priv->dev, type_data))
 		return -EOPNOTSUPP;
 
 	switch (type) {
@@ -281,7 +275,7 @@ static int ocelot_setup_tc_block_cb_flower(enum tc_setup_type type,
 }
 
 static struct ocelot_port_block*
-ocelot_port_block_create(struct ocelot_port *port)
+ocelot_port_block_create(struct ocelot_port_private *priv)
 {
 	struct ocelot_port_block *port_block;
 
@@ -289,7 +283,7 @@ ocelot_port_block_create(struct ocelot_port *port)
 	if (!port_block)
 		return NULL;
 
-	port_block->port = port;
+	port_block->priv = priv;
 
 	return port_block;
 }
@@ -306,7 +300,7 @@ static void ocelot_tc_block_unbind(void *cb_priv)
 	ocelot_port_block_destroy(port_block);
 }
 
-int ocelot_setup_tc_block_flower_bind(struct ocelot_port *port,
+int ocelot_setup_tc_block_flower_bind(struct ocelot_port_private *priv,
 				      struct flow_block_offload *f)
 {
 	struct ocelot_port_block *port_block;
@@ -316,16 +310,15 @@ int ocelot_setup_tc_block_flower_bind(struct ocelot_port *port,
 	if (f->binder_type == FLOW_BLOCK_BINDER_TYPE_CLSACT_EGRESS)
 		return -EOPNOTSUPP;
 
-	block_cb = flow_block_cb_lookup(f, ocelot_setup_tc_block_cb_flower,
-					port);
+	block_cb = flow_block_cb_lookup(f->block,
+					ocelot_setup_tc_block_cb_flower, priv);
 	if (!block_cb) {
-		port_block = ocelot_port_block_create(port);
+		port_block = ocelot_port_block_create(priv);
 		if (!port_block)
 			return -ENOMEM;
 
-		block_cb = flow_block_cb_alloc(f->net,
-					       ocelot_setup_tc_block_cb_flower,
-					       port, port_block,
+		block_cb = flow_block_cb_alloc(ocelot_setup_tc_block_cb_flower,
+					       priv, port_block,
 					       ocelot_tc_block_unbind);
 		if (IS_ERR(block_cb)) {
 			ret = PTR_ERR(block_cb);
@@ -346,13 +339,13 @@ err_cb_register:
 	return ret;
 }
 
-void ocelot_setup_tc_block_flower_unbind(struct ocelot_port *port,
+void ocelot_setup_tc_block_flower_unbind(struct ocelot_port_private *priv,
 					 struct flow_block_offload *f)
 {
 	struct flow_block_cb *block_cb;
 
-	block_cb = flow_block_cb_lookup(f, ocelot_setup_tc_block_cb_flower,
-					port);
+	block_cb = flow_block_cb_lookup(f->block,
+					ocelot_setup_tc_block_cb_flower, priv);
 	if (!block_cb)
 		return;
 

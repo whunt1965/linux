@@ -27,7 +27,6 @@
 #define MACHINE_FLAG_DIAG9C	BIT(3)
 #define MACHINE_FLAG_ESOP	BIT(4)
 #define MACHINE_FLAG_IDTE	BIT(5)
-#define MACHINE_FLAG_DIAG44	BIT(6)
 #define MACHINE_FLAG_EDAT1	BIT(7)
 #define MACHINE_FLAG_EDAT2	BIT(8)
 #define MACHINE_FLAG_TOPOLOGY	BIT(10)
@@ -54,6 +53,7 @@
 #define INITRD_SIZE_OFFSET	0x10410
 #define OLDMEM_BASE_OFFSET	0x10418
 #define OLDMEM_SIZE_OFFSET	0x10420
+#define KERNEL_VERSION_OFFSET	0x10428
 #define COMMAND_LINE_OFFSET	0x10480
 
 #ifndef __ASSEMBLY__
@@ -74,14 +74,17 @@ struct parmarea {
 	unsigned long initrd_size;			/* 0x10410 */
 	unsigned long oldmem_base;			/* 0x10418 */
 	unsigned long oldmem_size;			/* 0x10420 */
-	char pad1[0x10480 - 0x10428];			/* 0x10428 - 0x10480 */
+	unsigned long kernel_version;			/* 0x10428 */
+	char pad1[0x10480 - 0x10430];			/* 0x10430 - 0x10480 */
 	char command_line[ARCH_COMMAND_LINE_SIZE];	/* 0x10480 */
 };
 
 extern int noexec_disabled;
 extern int memory_end_set;
 extern unsigned long memory_end;
+extern unsigned long vmalloc_size;
 extern unsigned long max_physmem_end;
+extern unsigned long __swsusp_reset_dma;
 
 #define MACHINE_IS_VM		(S390_lowcore.machine_flags & MACHINE_FLAG_VM)
 #define MACHINE_IS_KVM		(S390_lowcore.machine_flags & MACHINE_FLAG_KVM)
@@ -90,7 +93,6 @@ extern unsigned long max_physmem_end;
 #define MACHINE_HAS_DIAG9C	(S390_lowcore.machine_flags & MACHINE_FLAG_DIAG9C)
 #define MACHINE_HAS_ESOP	(S390_lowcore.machine_flags & MACHINE_FLAG_ESOP)
 #define MACHINE_HAS_IDTE	(S390_lowcore.machine_flags & MACHINE_FLAG_IDTE)
-#define MACHINE_HAS_DIAG44	(S390_lowcore.machine_flags & MACHINE_FLAG_DIAG44)
 #define MACHINE_HAS_EDAT1	(S390_lowcore.machine_flags & MACHINE_FLAG_EDAT1)
 #define MACHINE_HAS_EDAT2	(S390_lowcore.machine_flags & MACHINE_FLAG_EDAT2)
 #define MACHINE_HAS_TOPOLOGY	(S390_lowcore.machine_flags & MACHINE_FLAG_TOPOLOGY)

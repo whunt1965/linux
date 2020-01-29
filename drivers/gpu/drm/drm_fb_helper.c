@@ -46,6 +46,7 @@
 #include <drm/drm_print.h>
 #include <drm/drm_vblank.h>
 
+#include "drm_crtc_helper_internal.h"
 #include "drm_internal.h"
 
 static bool drm_fbdev_emulation = true;
@@ -91,9 +92,12 @@ static DEFINE_MUTEX(kernel_fb_helper_lock);
  *
  * Drivers that support a dumb buffer with a virtual address and mmap support,
  * should try out the generic fbdev emulation using drm_fbdev_generic_setup().
+ * It will automatically set up deferred I/O if the driver requires a shadow
+ * buffer.
  *
- * Setup fbdev emulation by calling drm_fb_helper_fbdev_setup() and tear it
- * down by calling drm_fb_helper_fbdev_teardown().
+ * For other drivers, setup fbdev emulation by calling
+ * drm_fb_helper_fbdev_setup() and tear it down by calling
+ * drm_fb_helper_fbdev_teardown().
  *
  * At runtime drivers should restore the fbdev console by using
  * drm_fb_helper_lastclose() as their &drm_driver.lastclose callback.
@@ -126,8 +130,10 @@ static DEFINE_MUTEX(kernel_fb_helper_lock);
  * always run in process context since the fb_*() function could be running in
  * atomic context. If drm_fb_helper_deferred_io() is used as the deferred_io
  * callback it will also schedule dirty_work with the damage collected from the
- * mmap page writes. Drivers can use drm_fb_helper_defio_init() to setup
- * deferred I/O (coupled with drm_fb_helper_fbdev_teardown()).
+ * mmap page writes.
+ *
+ * Deferred I/O is not compatible with SHMEM. Such drivers should request an
+ * fbdev shadow buffer and call drm_fbdev_generic_setup() instead.
  */
 
 static void drm_fb_helper_restore_lut_atomic(struct drm_crtc *crtc)
@@ -403,6 +409,7 @@ static void drm_fb_helper_dirty_work(struct work_struct *work)
 	struct drm_clip_rect *clip = &helper->dirty_clip;
 	struct drm_clip_rect clip_copy;
 	unsigned long flags;
+	void *vaddr;
 
 	spin_lock_irqsave(&helper->dirty_lock, flags);
 	clip_copy = *clip;
@@ -412,10 +419,20 @@ static void drm_fb_helper_dirty_work(struct work_struct *work)
 
 	/* call dirty callback only when it has been really touched */
 	if (clip_copy.x1 < clip_copy.x2 && clip_copy.y1 < clip_copy.y2) {
+
 		/* Generic fbdev uses a shadow buffer */
-		if (helper->buffer)
+		if (helper->buffer) {
+			vaddr = drm_client_buffer_vmap(helper->buffer);
+			if (IS_ERR(vaddr))
+				return;
 			drm_fb_helper_dirty_blit_real(helper, &clip_copy);
-		helper->fb->funcs->dirty(helper->fb, NULL, 0, 0, &clip_copy, 1);
+		}
+		if (helper->fb->funcs->dirty)
+			helper->fb->funcs->dirty(helper->fb, NULL, 0, 0,
+						 &clip_copy, 1);
+
+		if (helper->buffer)
+			drm_client_buffer_vunmap(helper->buffer);
 	}
 }
 
@@ -604,6 +621,16 @@ void drm_fb_helper_unlink_fbi(struct drm_fb_helper *fb_helper)
 }
 EXPORT_SYMBOL(drm_fb_helper_unlink_fbi);
 
+static bool drm_fbdev_use_shadow_fb(struct drm_fb_helper *fb_helper)
+{
+	struct drm_device *dev = fb_helper->dev;
+	struct drm_framebuffer *fb = fb_helper->fb;
+
+	return dev->mode_config.prefer_shadow_fbdev ||
+	       dev->mode_config.prefer_shadow ||
+	       fb->funcs->dirty;
+}
+
 static void drm_fb_helper_dirty(struct fb_info *info, u32 x, u32 y,
 				u32 width, u32 height)
 {
@@ -611,7 +638,7 @@ static void drm_fb_helper_dirty(struct fb_info *info, u32 x, u32 y,
 	struct drm_clip_rect *clip = &helper->dirty_clip;
 	unsigned long flags;
 
-	if (!helper->fb->funcs->dirty)
+	if (!drm_fbdev_use_shadow_fb(helper))
 		return;
 
 	spin_lock_irqsave(&helper->dirty_lock, flags);
@@ -656,49 +683,6 @@ void drm_fb_helper_deferred_io(struct fb_info *info,
 	}
 }
 EXPORT_SYMBOL(drm_fb_helper_deferred_io);
-
-/**
- * drm_fb_helper_defio_init - fbdev deferred I/O initialization
- * @fb_helper: driver-allocated fbdev helper
- *
- * This function allocates &fb_deferred_io, sets callback to
- * drm_fb_helper_deferred_io(), delay to 50ms and calls fb_deferred_io_init().
- * It should be called from the &drm_fb_helper_funcs->fb_probe callback.
- * drm_fb_helper_fbdev_teardown() cleans up deferred I/O.
- *
- * NOTE: A copy of &fb_ops is made and assigned to &info->fbops. This is done
- * because fb_deferred_io_cleanup() clears &fbops->fb_mmap and would thereby
- * affect other instances of that &fb_ops.
- *
- * Returns:
- * 0 on success or a negative error code on failure.
- */
-int drm_fb_helper_defio_init(struct drm_fb_helper *fb_helper)
-{
-	struct fb_info *info = fb_helper->fbdev;
-	struct fb_deferred_io *fbdefio;
-	struct fb_ops *fbops;
-
-	fbdefio = kzalloc(sizeof(*fbdefio), GFP_KERNEL);
-	fbops = kzalloc(sizeof(*fbops), GFP_KERNEL);
-	if (!fbdefio || !fbops) {
-		kfree(fbdefio);
-		kfree(fbops);
-		return -ENOMEM;
-	}
-
-	info->fbdefio = fbdefio;
-	fbdefio->delay = msecs_to_jiffies(50);
-	fbdefio->deferred_io = drm_fb_helper_deferred_io;
-
-	*fbops = *info->fbops;
-	info->fbops = fbops;
-
-	fb_deferred_io_init(info);
-
-	return 0;
-}
-EXPORT_SYMBOL(drm_fb_helper_defio_init);
 
 /**
  * drm_fb_helper_sys_read - wrapper around fb_sys_read
@@ -1299,7 +1283,7 @@ int drm_fb_helper_check_var(struct fb_var_screeninfo *var,
 	 * Changes struct fb_var_screeninfo are currently not pushed back
 	 * to KMS, hence fail if different settings are requested.
 	 */
-	if (var->bits_per_pixel != fb->format->cpp[0] * 8 ||
+	if (var->bits_per_pixel > fb->format->cpp[0] * 8 ||
 	    var->xres > fb->width || var->yres > fb->height ||
 	    var->xres_virtual > fb->width || var->yres_virtual > fb->height) {
 		DRM_DEBUG("fb requested width/height/bpp can't fit in current fb "
@@ -1323,6 +1307,11 @@ int drm_fb_helper_check_var(struct fb_var_screeninfo *var,
 	    !var->blue.msb_right && !var->transp.msb_right) {
 		drm_fb_helper_fill_pixel_fmt(var, fb->format->depth);
 	}
+
+	/*
+	 * Likewise, bits_per_pixel should be rounded up to a supported value.
+	 */
+	var->bits_per_pixel = fb->format->cpp[0] * 8;
 
 	/*
 	 * drm fbdev emulation doesn't support changing the pixel format at all,
@@ -2178,6 +2167,7 @@ int drm_fb_helper_generic_probe(struct drm_fb_helper *fb_helper,
 	struct drm_framebuffer *fb;
 	struct fb_info *fbi;
 	u32 format;
+	void *vaddr;
 
 	DRM_DEBUG_KMS("surface width(%d), height(%d) and bpp(%d)\n",
 		      sizes->surface_width, sizes->surface_height,
@@ -2200,16 +2190,10 @@ int drm_fb_helper_generic_probe(struct drm_fb_helper *fb_helper,
 	fbi->fbops = &drm_fbdev_fb_ops;
 	fbi->screen_size = fb->height * fb->pitches[0];
 	fbi->fix.smem_len = fbi->screen_size;
-	fbi->screen_buffer = buffer->vaddr;
-	/* Shamelessly leak the physical address to user-space */
-#if IS_ENABLED(CONFIG_DRM_FBDEV_LEAK_PHYS_SMEM)
-	if (drm_leak_fbdev_smem && fbi->fix.smem_start == 0)
-		fbi->fix.smem_start =
-			page_to_phys(virt_to_page(fbi->screen_buffer));
-#endif
+
 	drm_fb_helper_fill_info(fbi, fb_helper, sizes);
 
-	if (fb->funcs->dirty) {
+	if (drm_fbdev_use_shadow_fb(fb_helper)) {
 		struct fb_ops *fbops;
 		void *shadow;
 
@@ -2231,6 +2215,19 @@ int drm_fb_helper_generic_probe(struct drm_fb_helper *fb_helper,
 		fbi->fbdefio = &drm_fbdev_defio;
 
 		fb_deferred_io_init(fbi);
+	} else {
+		/* buffer is mapped for HW framebuffer */
+		vaddr = drm_client_buffer_vmap(fb_helper->buffer);
+		if (IS_ERR(vaddr))
+			return PTR_ERR(vaddr);
+
+		fbi->screen_buffer = vaddr;
+		/* Shamelessly leak the physical address to user-space */
+#if IS_ENABLED(CONFIG_DRM_FBDEV_LEAK_PHYS_SMEM)
+		if (drm_leak_fbdev_smem && fbi->fix.smem_start == 0)
+			fbi->fix.smem_start =
+				page_to_phys(virt_to_page(fbi->screen_buffer));
+#endif
 	}
 
 	return 0;
@@ -2326,7 +2323,10 @@ static const struct drm_client_funcs drm_fbdev_client_funcs = {
  *
  * Drivers that set the dirty callback on their framebuffer will get a shadow
  * fbdev buffer that is blitted onto the real buffer. This is done in order to
- * make deferred I/O work with all kinds of buffers.
+ * make deferred I/O work with all kinds of buffers. A shadow buffer can be
+ * requested explicitly by setting struct drm_mode_config.prefer_shadow or
+ * struct drm_mode_config.prefer_shadow_fbdev to true beforehand. This is
+ * required to use generic fbdev emulation with SHMEM helpers.
  *
  * This function is safe to call even when there are no connectors present.
  * Setup will be retried on the next hotplug event.

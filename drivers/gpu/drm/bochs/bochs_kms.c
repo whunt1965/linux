@@ -2,12 +2,14 @@
 /*
  */
 
-#include "bochs.h"
+#include <linux/moduleparam.h>
+
 #include <drm/drm_atomic_helper.h>
-#include <drm/drm_plane_helper.h>
-#include <drm/drm_atomic_uapi.h>
 #include <drm/drm_gem_framebuffer_helper.h>
 #include <drm/drm_probe_helper.h>
+#include <drm/drm_vblank.h>
+
+#include "bochs.h"
 
 static int defx = 1024;
 static int defy = 768;
@@ -36,7 +38,8 @@ static void bochs_plane_update(struct bochs_device *bochs,
 	bochs_hw_setbase(bochs,
 			 state->crtc_x,
 			 state->crtc_y,
-			 gbo->bo.offset);
+			 state->fb->pitches[0],
+			 state->fb->offsets[0] + gbo->bo.offset);
 	bochs_hw_setformat(bochs, state->fb->format);
 }
 
@@ -66,33 +69,11 @@ static void bochs_pipe_update(struct drm_simple_display_pipe *pipe,
 	}
 }
 
-static int bochs_pipe_prepare_fb(struct drm_simple_display_pipe *pipe,
-				 struct drm_plane_state *new_state)
-{
-	struct drm_gem_vram_object *gbo;
-
-	if (!new_state->fb)
-		return 0;
-	gbo = drm_gem_vram_of_gem(new_state->fb->obj[0]);
-	return drm_gem_vram_pin(gbo, DRM_GEM_VRAM_PL_FLAG_VRAM);
-}
-
-static void bochs_pipe_cleanup_fb(struct drm_simple_display_pipe *pipe,
-				  struct drm_plane_state *old_state)
-{
-	struct drm_gem_vram_object *gbo;
-
-	if (!old_state->fb)
-		return;
-	gbo = drm_gem_vram_of_gem(old_state->fb->obj[0]);
-	drm_gem_vram_unpin(gbo);
-}
-
 static const struct drm_simple_display_pipe_funcs bochs_pipe_funcs = {
 	.enable	    = bochs_pipe_enable,
 	.update	    = bochs_pipe_update,
-	.prepare_fb = bochs_pipe_prepare_fb,
-	.cleanup_fb = bochs_pipe_cleanup_fb,
+	.prepare_fb = drm_gem_vram_simple_display_pipe_prepare_fb,
+	.cleanup_fb = drm_gem_vram_simple_display_pipe_cleanup_fb,
 };
 
 static int bochs_connector_get_modes(struct drm_connector *connector)
@@ -190,6 +171,7 @@ int bochs_kms_init(struct bochs_device *bochs)
 	bochs->dev->mode_config.fb_base = bochs->fb_base;
 	bochs->dev->mode_config.preferred_depth = 24;
 	bochs->dev->mode_config.prefer_shadow = 0;
+	bochs->dev->mode_config.prefer_shadow_fbdev = 1;
 	bochs->dev->mode_config.quirk_addfb_prefer_host_byte_order = true;
 
 	bochs->dev->mode_config.funcs = &bochs_mode_funcs;

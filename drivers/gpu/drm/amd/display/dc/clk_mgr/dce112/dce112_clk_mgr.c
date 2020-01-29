@@ -81,7 +81,7 @@ int dce112_set_clock(struct clk_mgr *clk_mgr_base, int requested_clk_khz)
 	/* Make sure requested clock isn't lower than minimum threshold*/
 	if (requested_clk_khz > 0)
 		requested_clk_khz = max(requested_clk_khz,
-				clk_mgr_dce->dentist_vco_freq_khz / 62);
+				clk_mgr_dce->base.dentist_vco_freq_khz / 62);
 
 	dce_clk_params.target_clock_frequency = requested_clk_khz;
 	dce_clk_params.pll_id = CLOCK_SOURCE_ID_DFS;
@@ -135,7 +135,7 @@ int dce112_set_dispclk(struct clk_mgr_internal *clk_mgr, int requested_clk_khz)
 	/* Make sure requested clock isn't lower than minimum threshold*/
 	if (requested_clk_khz > 0)
 		requested_clk_khz = max(requested_clk_khz,
-				clk_mgr->dentist_vco_freq_khz / 62);
+				clk_mgr->base.dentist_vco_freq_khz / 62);
 
 	dce_clk_params.target_clock_frequency = requested_clk_khz;
 	dce_clk_params.pll_id = CLOCK_SOURCE_ID_DFS;
@@ -226,11 +226,11 @@ void dce112_clk_mgr_construct(
 		struct dc_context *ctx,
 		struct clk_mgr_internal *clk_mgr)
 {
+	dce_clk_mgr_construct(ctx, clk_mgr);
+
 	memcpy(clk_mgr->max_clks_by_state,
 		dce112_max_clks_by_state,
 		sizeof(dce112_max_clks_by_state));
-
-	dce_clk_mgr_construct(ctx, clk_mgr);
 
 	clk_mgr->regs = &disp_clk_regs;
 	clk_mgr->clk_mgr_shift = &disp_clk_shift;

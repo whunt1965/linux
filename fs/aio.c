@@ -42,6 +42,7 @@
 #include <linux/ramfs.h>
 #include <linux/percpu-refcount.h>
 #include <linux/mount.h>
+#include <linux/pseudo_fs.h>
 
 #include <asm/kmap_types.h>
 #include <linux/uaccess.h>
@@ -249,15 +250,12 @@ static struct file *aio_private_file(struct kioctx *ctx, loff_t nr_pages)
 	return file;
 }
 
-static struct dentry *aio_mount(struct file_system_type *fs_type,
-				int flags, const char *dev_name, void *data)
+static int aio_init_fs_context(struct fs_context *fc)
 {
-	struct dentry *root = mount_pseudo(fs_type, "aio:", NULL, NULL,
-					   AIO_RING_MAGIC);
-
-	if (!IS_ERR(root))
-		root->d_sb->s_iflags |= SB_I_NOEXEC;
-	return root;
+	if (!init_pseudo(fc, AIO_RING_MAGIC))
+		return -ENOMEM;
+	fc->s_iflags |= SB_I_NOEXEC;
+	return 0;
 }
 
 /* aio_setup
@@ -268,7 +266,7 @@ static int __init aio_setup(void)
 {
 	static struct file_system_type aio_fs = {
 		.name		= "aio",
-		.mount		= aio_mount,
+		.init_fs_context = aio_init_fs_context,
 		.kill_sb	= kill_anon_super,
 	};
 	aio_mnt = kern_mount(&aio_fs);
@@ -425,7 +423,7 @@ static int aio_migratepage(struct address_space *mapping, struct page *new,
 	BUG_ON(PageWriteback(old));
 	get_page(new);
 
-	rc = migrate_page_move_mapping(mapping, new, old, mode, 1);
+	rc = migrate_page_move_mapping(mapping, new, old, 1);
 	if (rc != MIGRATEPAGE_SUCCESS) {
 		put_page(new);
 		goto out_unlock;
@@ -2058,7 +2056,7 @@ static long do_io_getevents(aio_context_t ctx_id,
  *	specifies an infinite timeout. Note that the timeout pointed to by
  *	timeout is relative.  Will fail with -ENOSYS if not implemented.
  */
-#if !defined(CONFIG_64BIT_TIME) || defined(CONFIG_64BIT)
+#ifdef CONFIG_64BIT
 
 SYSCALL_DEFINE5(io_getevents, aio_context_t, ctx_id,
 		long, min_nr,
@@ -2181,7 +2179,7 @@ SYSCALL_DEFINE5(io_getevents_time32, __u32, ctx_id,
 #ifdef CONFIG_COMPAT
 
 struct __compat_aio_sigset {
-	compat_sigset_t __user	*sigmask;
+	compat_uptr_t		sigmask;
 	compat_size_t		sigsetsize;
 };
 
@@ -2195,7 +2193,7 @@ COMPAT_SYSCALL_DEFINE6(io_pgetevents,
 		struct old_timespec32 __user *, timeout,
 		const struct __compat_aio_sigset __user *, usig)
 {
-	struct __compat_aio_sigset ksig = { NULL, };
+	struct __compat_aio_sigset ksig = { 0, };
 	struct timespec64 t;
 	bool interrupted;
 	int ret;
@@ -2206,7 +2204,7 @@ COMPAT_SYSCALL_DEFINE6(io_pgetevents,
 	if (usig && copy_from_user(&ksig, usig, sizeof(ksig)))
 		return -EFAULT;
 
-	ret = set_compat_user_sigmask(ksig.sigmask, ksig.sigsetsize);
+	ret = set_compat_user_sigmask(compat_ptr(ksig.sigmask), ksig.sigsetsize);
 	if (ret)
 		return ret;
 
@@ -2230,7 +2228,7 @@ COMPAT_SYSCALL_DEFINE6(io_pgetevents_time64,
 		struct __kernel_timespec __user *, timeout,
 		const struct __compat_aio_sigset __user *, usig)
 {
-	struct __compat_aio_sigset ksig = { NULL, };
+	struct __compat_aio_sigset ksig = { 0, };
 	struct timespec64 t;
 	bool interrupted;
 	int ret;
@@ -2241,7 +2239,7 @@ COMPAT_SYSCALL_DEFINE6(io_pgetevents_time64,
 	if (usig && copy_from_user(&ksig, usig, sizeof(ksig)))
 		return -EFAULT;
 
-	ret = set_compat_user_sigmask(ksig.sigmask, ksig.sigsetsize);
+	ret = set_compat_user_sigmask(compat_ptr(ksig.sigmask), ksig.sigsetsize);
 	if (ret)
 		return ret;
 

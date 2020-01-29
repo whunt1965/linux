@@ -7,6 +7,7 @@
 #include <linux/blkdev.h>
 #include <linux/writeback.h>
 #include <linux/sched/mm.h>
+#include "misc.h"
 #include "ctree.h"
 #include "transaction.h"
 #include "btrfs_inode.h"
@@ -546,7 +547,6 @@ u64 btrfs_wait_ordered_extents(struct btrfs_root *root, u64 nr,
 		spin_unlock(&root->ordered_extent_lock);
 
 		btrfs_init_work(&ordered->flush_work,
-				btrfs_flush_delalloc_helper,
 				btrfs_run_ordered_extent_work, NULL, NULL);
 		list_add_tail(&ordered->work_list, &works);
 		btrfs_queue_work(fs_info->flush_workers, &ordered->flush_work);
@@ -572,12 +572,11 @@ u64 btrfs_wait_ordered_extents(struct btrfs_root *root, u64 nr,
 	return count;
 }
 
-u64 btrfs_wait_ordered_roots(struct btrfs_fs_info *fs_info, u64 nr,
+void btrfs_wait_ordered_roots(struct btrfs_fs_info *fs_info, u64 nr,
 			     const u64 range_start, const u64 range_len)
 {
 	struct btrfs_root *root;
 	struct list_head splice;
-	u64 total_done = 0;
 	u64 done;
 
 	INIT_LIST_HEAD(&splice);
@@ -597,7 +596,6 @@ u64 btrfs_wait_ordered_roots(struct btrfs_fs_info *fs_info, u64 nr,
 		done = btrfs_wait_ordered_extents(root, nr,
 						  range_start, range_len);
 		btrfs_put_fs_root(root);
-		total_done += done;
 
 		spin_lock(&fs_info->ordered_root_lock);
 		if (nr != U64_MAX) {
@@ -607,8 +605,6 @@ u64 btrfs_wait_ordered_roots(struct btrfs_fs_info *fs_info, u64 nr,
 	list_splice_tail(&splice, &fs_info->ordered_roots);
 	spin_unlock(&fs_info->ordered_root_lock);
 	mutex_unlock(&fs_info->ordered_operations_mutex);
-
-	return total_done;
 }
 
 /*
@@ -985,13 +981,14 @@ void btrfs_lock_and_flush_ordered_range(struct extent_io_tree *tree,
 					struct extent_state **cached_state)
 {
 	struct btrfs_ordered_extent *ordered;
-	struct extent_state *cachedp = NULL;
+	struct extent_state *cache = NULL;
+	struct extent_state **cachedp = &cache;
 
 	if (cached_state)
-		cachedp = *cached_state;
+		cachedp = cached_state;
 
 	while (1) {
-		lock_extent_bits(tree, start, end, &cachedp);
+		lock_extent_bits(tree, start, end, cachedp);
 		ordered = btrfs_lookup_ordered_range(inode, start,
 						     end - start + 1);
 		if (!ordered) {
@@ -1001,10 +998,10 @@ void btrfs_lock_and_flush_ordered_range(struct extent_io_tree *tree,
 			 * aren't exposing it outside of this function
 			 */
 			if (!cached_state)
-				refcount_dec(&cachedp->refs);
+				refcount_dec(&cache->refs);
 			break;
 		}
-		unlock_extent_cached(tree, start, end, &cachedp);
+		unlock_extent_cached(tree, start, end, cachedp);
 		btrfs_start_ordered_extent(&inode->vfs_inode, ordered, 1);
 		btrfs_put_ordered_extent(ordered);
 	}

@@ -106,10 +106,10 @@ static int  amdgpu_debugfs_process_reg_op(bool read, struct file *f,
 	ssize_t result = 0;
 	int r;
 	bool pm_pg_lock, use_bank, use_ring;
-	unsigned instance_bank, sh_bank, se_bank, me, pipe, queue;
+	unsigned instance_bank, sh_bank, se_bank, me, pipe, queue, vmid;
 
 	pm_pg_lock = use_bank = use_ring = false;
-	instance_bank = sh_bank = se_bank = me = pipe = queue = 0;
+	instance_bank = sh_bank = se_bank = me = pipe = queue = vmid = 0;
 
 	if (size & 0x3 || *pos & 0x3 ||
 			((*pos & (1ULL << 62)) && (*pos & (1ULL << 61))))
@@ -135,6 +135,7 @@ static int  amdgpu_debugfs_process_reg_op(bool read, struct file *f,
 		me = (*pos & GENMASK_ULL(33, 24)) >> 24;
 		pipe = (*pos & GENMASK_ULL(43, 34)) >> 34;
 		queue = (*pos & GENMASK_ULL(53, 44)) >> 44;
+		vmid = (*pos & GENMASK_ULL(58, 54)) >> 54;
 
 		use_ring = 1;
 	} else {
@@ -152,7 +153,7 @@ static int  amdgpu_debugfs_process_reg_op(bool read, struct file *f,
 					sh_bank, instance_bank);
 	} else if (use_ring) {
 		mutex_lock(&adev->srbm_mutex);
-		amdgpu_gfx_select_me_pipe_q(adev, me, pipe, queue);
+		amdgpu_gfx_select_me_pipe_q(adev, me, pipe, queue, vmid);
 	}
 
 	if (pm_pg_lock)
@@ -185,7 +186,7 @@ end:
 		amdgpu_gfx_select_se_sh(adev, 0xffffffff, 0xffffffff, 0xffffffff);
 		mutex_unlock(&adev->grbm_idx_mutex);
 	} else if (use_ring) {
-		amdgpu_gfx_select_me_pipe_q(adev, 0, 0, 0);
+		amdgpu_gfx_select_me_pipe_q(adev, 0, 0, 0, 0);
 		mutex_unlock(&adev->srbm_mutex);
 	}
 
@@ -706,7 +707,7 @@ static ssize_t amdgpu_debugfs_gpr_read(struct file *f, char __user *buf,
 	thread = (*pos & GENMASK_ULL(59, 52)) >> 52;
 	bank = (*pos & GENMASK_ULL(61, 60)) >> 60;
 
-	data = kmalloc_array(1024, sizeof(*data), GFP_KERNEL);
+	data = kcalloc(1024, sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
@@ -858,6 +859,9 @@ static int amdgpu_debugfs_test_ib(struct seq_file *m, void *data)
 	struct amdgpu_device *adev = dev->dev_private;
 	int r = 0, i;
 
+	/* Avoid accidently unparking the sched thread during GPU reset */
+	mutex_lock(&adev->lock_reset);
+
 	/* hold on the scheduler */
 	for (i = 0; i < AMDGPU_MAX_RINGS; i++) {
 		struct amdgpu_ring *ring = adev->rings[i];
@@ -882,6 +886,8 @@ static int amdgpu_debugfs_test_ib(struct seq_file *m, void *data)
 			continue;
 		kthread_unpark(ring->sched.thread);
 	}
+
+	mutex_unlock(&adev->lock_reset);
 
 	return 0;
 }
@@ -1035,6 +1041,9 @@ static int amdgpu_debugfs_ib_preempt(void *data, u64 val)
 	if (!fences)
 		return -ENOMEM;
 
+	/* Avoid accidently unparking the sched thread during GPU reset */
+	mutex_lock(&adev->lock_reset);
+
 	/* stop the scheduler */
 	kthread_park(ring->sched.thread);
 
@@ -1074,10 +1083,11 @@ failure:
 	/* restart the scheduler */
 	kthread_unpark(ring->sched.thread);
 
+	mutex_unlock(&adev->lock_reset);
+
 	ttm_bo_unlock_delayed_workqueue(&adev->mman.bdev, resched);
 
-	if (fences)
-		kfree(fences);
+	kfree(fences);
 
 	return 0;
 }
@@ -1089,8 +1099,8 @@ int amdgpu_debugfs_init(struct amdgpu_device *adev)
 {
 	adev->debugfs_preempt =
 		debugfs_create_file("amdgpu_preempt_ib", 0600,
-				    adev->ddev->primary->debugfs_root,
-				    (void *)adev, &fops_ib_preempt);
+				    adev->ddev->primary->debugfs_root, adev,
+				    &fops_ib_preempt);
 	if (!(adev->debugfs_preempt)) {
 		DRM_ERROR("unable to create amdgpu_preempt_ib debugsfs file\n");
 		return -EIO;
@@ -1102,8 +1112,7 @@ int amdgpu_debugfs_init(struct amdgpu_device *adev)
 
 void amdgpu_debugfs_preempt_cleanup(struct amdgpu_device *adev)
 {
-	if (adev->debugfs_preempt)
-		debugfs_remove(adev->debugfs_preempt);
+	debugfs_remove(adev->debugfs_preempt);
 }
 
 #else

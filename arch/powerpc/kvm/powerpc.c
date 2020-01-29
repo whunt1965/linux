@@ -31,6 +31,8 @@
 #include <asm/hvcall.h>
 #include <asm/plpar_wrappers.h>
 #endif
+#include <asm/ultravisor.h>
+#include <asm/kvm_host.h>
 
 #include "timing.h"
 #include "irq.h"
@@ -48,6 +50,11 @@ EXPORT_SYMBOL_GPL(kvmppc_pr_ops);
 int kvm_arch_vcpu_runnable(struct kvm_vcpu *v)
 {
 	return !!(v->arch.pending_exceptions) || kvm_request_pending(v);
+}
+
+bool kvm_arch_dy_runnable(struct kvm_vcpu *vcpu)
+{
+	return kvm_arch_vcpu_runnable(vcpu);
 }
 
 bool kvm_arch_vcpu_in_kernel(struct kvm_vcpu *vcpu)
@@ -452,16 +459,6 @@ err_out:
 	return -EINVAL;
 }
 
-bool kvm_arch_has_vcpu_debugfs(void)
-{
-	return false;
-}
-
-int kvm_arch_create_vcpu_debugfs(struct kvm_vcpu *vcpu)
-{
-	return 0;
-}
-
 void kvm_arch_destroy_vm(struct kvm *kvm)
 {
 	unsigned int i;
@@ -527,6 +524,8 @@ int kvm_vm_ioctl_check_extension(struct kvm *kvm, long ext)
 	case KVM_CAP_IMMEDIATE_EXIT:
 		r = 1;
 		break;
+	case KVM_CAP_PPC_GUEST_DEBUG_SSTEP:
+		/* fall through */
 	case KVM_CAP_PPC_PAIRED_SINGLES:
 	case KVM_CAP_PPC_OSI:
 	case KVM_CAP_PPC_GET_PVINFO:
@@ -566,7 +565,8 @@ int kvm_vm_ioctl_check_extension(struct kvm *kvm, long ext)
 		 * a POWER9 processor) and the PowerNV platform, as
 		 * nested is not yet supported.
 		 */
-		r = xive_enabled() && !!cpu_has_feature(CPU_FTR_HVMODE);
+		r = xive_enabled() && !!cpu_has_feature(CPU_FTR_HVMODE) &&
+			kvmppc_xive_native_supported();
 		break;
 #endif
 
@@ -2413,6 +2413,16 @@ long kvm_arch_vm_ioctl(struct file *filp,
 		r = kvmppc_get_cpu_char(&cpuchar);
 		if (r >= 0 && copy_to_user(argp, &cpuchar, sizeof(cpuchar)))
 			r = -EFAULT;
+		break;
+	}
+	case KVM_PPC_SVM_OFF: {
+		struct kvm *kvm = filp->private_data;
+
+		r = 0;
+		if (!kvm->arch.kvm_ops->svm_off)
+			goto out;
+
+		r = kvm->arch.kvm_ops->svm_off(kvm);
 		break;
 	}
 	default: {

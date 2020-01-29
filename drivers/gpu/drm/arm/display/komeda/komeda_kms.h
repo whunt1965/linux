@@ -14,8 +14,6 @@
 #include <drm/drm_device.h>
 #include <drm/drm_writeback.h>
 #include <drm/drm_print.h>
-#include <video/videomode.h>
-#include <video/display_timing.h>
 
 /**
  * struct komeda_plane - komeda instance of drm_plane
@@ -33,11 +31,6 @@ struct komeda_plane {
 	 * Layers with same capabilities.
 	 */
 	struct komeda_layer *layer;
-
-	/** @prop_img_enhancement: for on/off image enhancement */
-	struct drm_property *prop_img_enhancement;
-	/** @prop_layer_split: for on/off layer_split */
-	struct drm_property *prop_layer_split;
 };
 
 /**
@@ -52,11 +45,8 @@ struct komeda_plane_state {
 	/** @zlist_node: zorder list node */
 	struct list_head zlist_node;
 
-	/* @img_enhancement: on/off image enhancement
-	 * @layer_split: on/off layer_split
-	 */
-	u8 img_enhancement : 1,
-	   layer_split : 1;
+	/** @layer_split: on/off layer_split */
+	u8 layer_split : 1;
 };
 
 /**
@@ -94,12 +84,6 @@ struct komeda_crtc {
 
 	/** @disable_done: this flip_done is for tracing the disable */
 	struct completion *disable_done;
-
-	/** @clock_ratio_property: property for ratio of (aclk << 32)/pxlclk */
-	struct drm_property *clock_ratio_property;
-
-	/** @slave_planes_property: property for slaves of the planes */
-	struct drm_property *slave_planes_property;
 };
 
 /**
@@ -182,7 +166,9 @@ static inline bool has_flip_h(u32 rot)
 		return !!(rotation & DRM_MODE_REFLECT_X);
 }
 
-unsigned long komeda_calc_aclk(struct komeda_crtc_state *kcrtc_st);
+void komeda_crtc_get_color_config(struct drm_crtc_state *crtc_st,
+				  u32 *color_depths, u32 *color_formats);
+unsigned long komeda_crtc_get_aclk(struct komeda_crtc_state *kcrtc_st);
 
 int komeda_kms_setup_crtcs(struct komeda_kms_dev *kms, struct komeda_dev *mdev);
 

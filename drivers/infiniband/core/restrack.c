@@ -107,10 +107,8 @@ void rdma_restrack_clean(struct ib_device *dev)
  * rdma_restrack_count() - the current usage of specific object
  * @dev:  IB device
  * @type: actual type of object to operate
- * @ns:   PID namespace
  */
-int rdma_restrack_count(struct ib_device *dev, enum rdma_restrack_type type,
-			struct pid_namespace *ns)
+int rdma_restrack_count(struct ib_device *dev, enum rdma_restrack_type type)
 {
 	struct rdma_restrack_root *rt = &dev->res[type];
 	struct rdma_restrack_entry *e;
@@ -118,12 +116,8 @@ int rdma_restrack_count(struct ib_device *dev, enum rdma_restrack_type type,
 	u32 cnt = 0;
 
 	xa_lock(&rt->xa);
-	xas_for_each(&xas, e, U32_MAX) {
-		if (ns == &init_pid_ns ||
-		    (!rdma_is_kernel_res(e) &&
-		     ns == task_active_pid_ns(e->task)))
-			cnt++;
-	}
+	xas_for_each(&xas, e, U32_MAX)
+		cnt++;
 	xa_unlock(&rt->xa);
 	return cnt;
 }
@@ -349,16 +343,3 @@ out:
 	}
 }
 EXPORT_SYMBOL(rdma_restrack_del);
-
-bool rdma_is_visible_in_pid_ns(struct rdma_restrack_entry *res)
-{
-	/*
-	 * 1. Kern resources should be visible in init
-	 *    namespace only
-	 * 2. Present only resources visible in the current
-	 *     namespace
-	 */
-	if (rdma_is_kernel_res(res))
-		return task_active_pid_ns(current) == &init_pid_ns;
-	return task_active_pid_ns(current) == task_active_pid_ns(res->task);
-}

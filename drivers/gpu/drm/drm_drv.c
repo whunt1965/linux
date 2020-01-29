@@ -31,6 +31,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/mount.h>
+#include <linux/pseudo_fs.h>
 #include <linux/slab.h>
 #include <linux/srcu.h>
 
@@ -45,26 +46,9 @@
 #include "drm_internal.h"
 #include "drm_legacy.h"
 
-/*
- * drm_debug: Enable debug output.
- * Bitmask of DRM_UT_x. See include/drm/drm_print.h for details.
- */
-unsigned int drm_debug = 0;
-EXPORT_SYMBOL(drm_debug);
-
 MODULE_AUTHOR("Gareth Hughes, Leif Delgass, José Fonseca, Jon Smirl");
 MODULE_DESCRIPTION("DRM shared core routines");
 MODULE_LICENSE("GPL and additional rights");
-MODULE_PARM_DESC(debug, "Enable debug output, where each bit enables a debug category.\n"
-"\t\tBit 0 (0x01)  will enable CORE messages (drm core code)\n"
-"\t\tBit 1 (0x02)  will enable DRIVER messages (drm controller code)\n"
-"\t\tBit 2 (0x04)  will enable KMS messages (modesetting code)\n"
-"\t\tBit 3 (0x08)  will enable PRIME messages (prime code)\n"
-"\t\tBit 4 (0x10)  will enable ATOMIC messages (atomic code)\n"
-"\t\tBit 5 (0x20)  will enable VBL messages (vblank code)\n"
-"\t\tBit 7 (0x80)  will enable LEASE messages (leasing code)\n"
-"\t\tBit 8 (0x100) will enable DP messages (displayport code)");
-module_param_named(debug, drm_debug, int, 0600);
 
 static DEFINE_SPINLOCK(drm_minor_lock);
 static struct idr drm_minors_idr;
@@ -327,11 +311,9 @@ void drm_minor_release(struct drm_minor *minor)
  *		struct drm_device *drm;
  *		int ret;
  *
- *		[
- *		  devm_kzalloc() can't be used here because the drm_device
- *		  lifetime can exceed the device lifetime if driver unbind
- *		  happens when userspace still has open file descriptors.
- *		]
+ *		// devm_kzalloc() can't be used here because the drm_device '
+ *		// lifetime can exceed the device lifetime if driver unbind
+ *		// happens when userspace still has open file descriptors.
  *		priv = kzalloc(sizeof(*priv), GFP_KERNEL);
  *		if (!priv)
  *			return -ENOMEM;
@@ -354,7 +336,7 @@ void drm_minor_release(struct drm_minor *minor)
  *		if (IS_ERR(priv->pclk))
  *			return PTR_ERR(priv->pclk);
  *
- *		[ Further setup, display pipeline etc ]
+ *		// Further setup, display pipeline etc
  *
  *		platform_set_drvdata(pdev, drm);
  *
@@ -369,7 +351,7 @@ void drm_minor_release(struct drm_minor *minor)
  *		return 0;
  *	}
  *
- *	[ This function is called before the devm_ resources are released ]
+ *	// This function is called before the devm_ resources are released
  *	static int driver_remove(struct platform_device *pdev)
  *	{
  *		struct drm_device *drm = platform_get_drvdata(pdev);
@@ -380,7 +362,7 @@ void drm_minor_release(struct drm_minor *minor)
  *		return 0;
  *	}
  *
- *	[ This function is called on kernel restart and shutdown ]
+ *	// This function is called on kernel restart and shutdown
  *	static void driver_shutdown(struct platform_device *pdev)
  *	{
  *		drm_atomic_helper_shutdown(platform_get_drvdata(pdev));
@@ -535,28 +517,15 @@ EXPORT_SYMBOL(drm_dev_unplug);
 static int drm_fs_cnt;
 static struct vfsmount *drm_fs_mnt;
 
-static const struct dentry_operations drm_fs_dops = {
-	.d_dname	= simple_dname,
-};
-
-static const struct super_operations drm_fs_sops = {
-	.statfs		= simple_statfs,
-};
-
-static struct dentry *drm_fs_mount(struct file_system_type *fs_type, int flags,
-				   const char *dev_name, void *data)
+static int drm_fs_init_fs_context(struct fs_context *fc)
 {
-	return mount_pseudo(fs_type,
-			    "drm:",
-			    &drm_fs_sops,
-			    &drm_fs_dops,
-			    0x010203ff);
+	return init_pseudo(fc, 0x010203ff) ? 0 : -ENOMEM;
 }
 
 static struct file_system_type drm_fs_type = {
 	.name		= "drm",
 	.owner		= THIS_MODULE,
-	.mount		= drm_fs_mount,
+	.init_fs_context = drm_fs_init_fs_context,
 	.kill_sb	= kill_anon_super,
 };
 

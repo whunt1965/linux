@@ -180,7 +180,8 @@ again:
 
 create_mode:
 	mode = drm_mode_create_from_cmdline_mode(connector->dev, cmdline_mode);
-	list_add(&mode->head, &connector->modes);
+	if (mode)
+		list_add(&mode->head, &connector->modes);
 
 	return mode;
 }
@@ -414,9 +415,8 @@ static bool connector_has_possible_crtc(struct drm_connector *connector,
 					struct drm_crtc *crtc)
 {
 	struct drm_encoder *encoder;
-	int i;
 
-	drm_connector_for_each_possible_encoder(connector, encoder, i) {
+	drm_connector_for_each_possible_encoder(connector, encoder) {
 		if (encoder->possible_crtcs & drm_crtc_mask(crtc))
 			return true;
 	}
@@ -858,7 +858,7 @@ bool drm_client_rotation(struct drm_mode_set *modeset, unsigned int *rotation)
 	 * simple XOR between the two handle the addition nicely.
 	 */
 	cmdline = &connector->cmdline_mode;
-	if (cmdline->specified) {
+	if (cmdline->specified && cmdline->rotation_reflection) {
 		unsigned int cmdline_rest, panel_rest;
 		unsigned int cmdline_rot, panel_rot;
 		unsigned int sum_rot, sum_rest;

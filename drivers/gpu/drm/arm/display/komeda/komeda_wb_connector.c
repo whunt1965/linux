@@ -13,7 +13,6 @@ komeda_wb_init_data_flow(struct komeda_layer *wb_layer,
 			 struct komeda_crtc_state *kcrtc_st,
 			 struct komeda_data_flow_cfg *dflow)
 {
-	struct komeda_scaler *scaler = wb_layer->base.pipeline->scalers[0];
 	struct drm_framebuffer *fb = conn_st->writeback_job->fb;
 
 	memset(dflow, 0, sizeof(*dflow));
@@ -28,14 +27,7 @@ komeda_wb_init_data_flow(struct komeda_layer *wb_layer,
 	dflow->pixel_blend_mode = DRM_MODE_BLEND_PIXEL_NONE;
 	dflow->rot = DRM_MODE_ROTATE_0;
 
-	komeda_complete_data_flow_cfg(dflow, fb);
-
-	/* if scaling exceed the acceptable scaler input/output range, try to
-	 * enable split.
-	 */
-	if (dflow->en_scaling && scaler)
-		dflow->en_split = !in_range(&scaler->hsize, dflow->in_w) ||
-				  !in_range(&scaler->hsize, dflow->out_w);
+	komeda_complete_data_flow_cfg(wb_layer, dflow, fb);
 
 	return 0;
 }
@@ -51,9 +43,8 @@ komeda_wb_encoder_atomic_check(struct drm_encoder *encoder,
 	struct komeda_data_flow_cfg dflow;
 	int err;
 
-	if (!writeback_job || !writeback_job->fb) {
+	if (!writeback_job)
 		return 0;
-	}
 
 	if (!crtc_st->active) {
 		DRM_DEBUG_ATOMIC("Cannot write the composition result out on a inactive CRTC.\n");
@@ -150,13 +141,14 @@ static int komeda_wb_connector_add(struct komeda_kms_dev *kms,
 	struct komeda_dev *mdev = kms->base.dev_private;
 	struct komeda_wb_connector *kwb_conn;
 	struct drm_writeback_connector *wb_conn;
+	struct drm_display_info *info;
 	u32 *formats, n_formats = 0;
 	int err;
 
 	if (!kcrtc->master->wb_layer)
 		return 0;
 
-	kwb_conn = kzalloc(sizeof(*wb_conn), GFP_KERNEL);
+	kwb_conn = kzalloc(sizeof(*kwb_conn), GFP_KERNEL);
 	if (!kwb_conn)
 		return -ENOMEM;
 
@@ -174,10 +166,16 @@ static int komeda_wb_connector_add(struct komeda_kms_dev *kms,
 					   &komeda_wb_encoder_helper_funcs,
 					   formats, n_formats);
 	komeda_put_fourcc_list(formats);
-	if (err)
+	if (err) {
+		kfree(kwb_conn);
 		return err;
+	}
 
 	drm_connector_helper_add(&wb_conn->base, &komeda_wb_conn_helper_funcs);
+
+	info = &kwb_conn->base.base.display_info;
+	info->bpc = __fls(kcrtc->master->improc->supported_color_depths);
+	info->color_formats = kcrtc->master->improc->supported_color_formats;
 
 	kcrtc->wb_conn = kwb_conn;
 

@@ -8,7 +8,7 @@ title: Allwinner A10 Security ID Device Tree Bindings
 
 maintainers:
   - Chen-Yu Tsai <wens@csie.org>
-  - Maxime Ripard <maxime.ripard@bootlin.com>
+  - Maxime Ripard <mripard@kernel.org>
 
 allOf:
   - $ref: "nvmem.yaml#"
@@ -31,19 +31,17 @@ required:
   - compatible
   - reg
 
-# FIXME: We should set it, but it would report all the generic
-# properties as additional properties.
-# additionalProperties: false
+unevaluatedProperties: false
 
 examples:
   - |
-    sid@1c23800 {
+    efuse@1c23800 {
         compatible = "allwinner,sun4i-a10-sid";
         reg = <0x01c23800 0x10>;
     };
 
   - |
-    sid@1c23800 {
+    efuse@1c23800 {
         compatible = "allwinner,sun7i-a20-sid";
         reg = <0x01c23800 0x200>;
     };

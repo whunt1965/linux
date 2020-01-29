@@ -381,7 +381,7 @@ xfs_compat_attrlist_by_handle(
 		return PTR_ERR(dentry);
 
 	error = -ENOMEM;
-	kbuf = kmem_zalloc_large(al_hreq.buflen, KM_SLEEP);
+	kbuf = kmem_zalloc_large(al_hreq.buflen, 0);
 	if (!kbuf)
 		goto out_dput;
 
@@ -500,44 +500,6 @@ xfs_compat_attrmulti_by_handle(
 	return error;
 }
 
-STATIC int
-xfs_compat_fssetdm_by_handle(
-	struct file		*parfilp,
-	void			__user *arg)
-{
-	int			error;
-	struct fsdmidata	fsd;
-	compat_xfs_fsop_setdm_handlereq_t dmhreq;
-	struct dentry		*dentry;
-
-	if (!capable(CAP_MKNOD))
-		return -EPERM;
-	if (copy_from_user(&dmhreq, arg,
-			   sizeof(compat_xfs_fsop_setdm_handlereq_t)))
-		return -EFAULT;
-
-	dentry = xfs_compat_handlereq_to_dentry(parfilp, &dmhreq.hreq);
-	if (IS_ERR(dentry))
-		return PTR_ERR(dentry);
-
-	if (IS_IMMUTABLE(d_inode(dentry)) || IS_APPEND(d_inode(dentry))) {
-		error = -EPERM;
-		goto out;
-	}
-
-	if (copy_from_user(&fsd, compat_ptr(dmhreq.data), sizeof(fsd))) {
-		error = -EFAULT;
-		goto out;
-	}
-
-	error = xfs_set_dmattrs(XFS_I(d_inode(dentry)), fsd.fsd_dmevmask,
-				 fsd.fsd_dmstate);
-
-out:
-	dput(dentry);
-	return error;
-}
-
 long
 xfs_file_compat_ioctl(
 	struct file		*filp,
@@ -547,79 +509,23 @@ xfs_file_compat_ioctl(
 	struct inode		*inode = file_inode(filp);
 	struct xfs_inode	*ip = XFS_I(inode);
 	struct xfs_mount	*mp = ip->i_mount;
-	void			__user *arg = (void __user *)p;
+	void			__user *arg = compat_ptr(p);
 	int			error;
 
 	trace_xfs_file_compat_ioctl(ip);
 
 	switch (cmd) {
-	/* No size or alignment issues on any arch */
-	case XFS_IOC_DIOINFO:
-	case XFS_IOC_FSGEOMETRY_V4:
-	case XFS_IOC_FSGEOMETRY:
-	case XFS_IOC_AG_GEOMETRY:
-	case XFS_IOC_FSGETXATTR:
-	case XFS_IOC_FSSETXATTR:
-	case XFS_IOC_FSGETXATTRA:
-	case XFS_IOC_FSSETDM:
-	case XFS_IOC_GETBMAP:
-	case XFS_IOC_GETBMAPA:
-	case XFS_IOC_GETBMAPX:
-	case XFS_IOC_FSCOUNTS:
-	case XFS_IOC_SET_RESBLKS:
-	case XFS_IOC_GET_RESBLKS:
-	case XFS_IOC_FSGROWFSLOG:
-	case XFS_IOC_GOINGDOWN:
-	case XFS_IOC_ERROR_INJECTION:
-	case XFS_IOC_ERROR_CLEARALL:
-	case FS_IOC_GETFSMAP:
-	case XFS_IOC_SCRUB_METADATA:
-	case XFS_IOC_BULKSTAT:
-	case XFS_IOC_INUMBERS:
-		return xfs_file_ioctl(filp, cmd, p);
-#if !defined(BROKEN_X86_ALIGNMENT) || defined(CONFIG_X86_X32)
-	/*
-	 * These are handled fine if no alignment issues.  To support x32
-	 * which uses native 64-bit alignment we must emit these cases in
-	 * addition to the ia-32 compat set below.
-	 */
-	case XFS_IOC_ALLOCSP:
-	case XFS_IOC_FREESP:
-	case XFS_IOC_RESVSP:
-	case XFS_IOC_UNRESVSP:
-	case XFS_IOC_ALLOCSP64:
-	case XFS_IOC_FREESP64:
-	case XFS_IOC_RESVSP64:
-	case XFS_IOC_UNRESVSP64:
-	case XFS_IOC_FSGEOMETRY_V1:
-	case XFS_IOC_FSGROWFSDATA:
-	case XFS_IOC_FSGROWFSRT:
-	case XFS_IOC_ZERO_RANGE:
-#ifdef CONFIG_X86_X32
-	/*
-	 * x32 special: this gets a different cmd number from the ia-32 compat
-	 * case below; the associated data will match native 64-bit alignment.
-	 */
-	case XFS_IOC_SWAPEXT:
-#endif
-		return xfs_file_ioctl(filp, cmd, p);
-#endif
 #if defined(BROKEN_X86_ALIGNMENT)
 	case XFS_IOC_ALLOCSP_32:
 	case XFS_IOC_FREESP_32:
 	case XFS_IOC_ALLOCSP64_32:
-	case XFS_IOC_FREESP64_32:
-	case XFS_IOC_RESVSP_32:
-	case XFS_IOC_UNRESVSP_32:
-	case XFS_IOC_RESVSP64_32:
-	case XFS_IOC_UNRESVSP64_32:
-	case XFS_IOC_ZERO_RANGE_32: {
+	case XFS_IOC_FREESP64_32: {
 		struct xfs_flock64	bf;
 
 		if (xfs_compat_flock64_copyin(&bf, arg))
 			return -EFAULT;
 		cmd = _NATIVE_IOC(cmd, struct xfs_flock64);
-		return xfs_ioc_space(filp, cmd, &bf);
+		return xfs_ioc_space(filp, &bf);
 	}
 	case XFS_IOC_FSGEOMETRY_V1_32:
 		return xfs_compat_ioc_fsgeometry_v1(mp, arg);
@@ -702,9 +608,8 @@ xfs_file_compat_ioctl(
 		return xfs_compat_attrlist_by_handle(filp, arg);
 	case XFS_IOC_ATTRMULTI_BY_HANDLE_32:
 		return xfs_compat_attrmulti_by_handle(filp, arg);
-	case XFS_IOC_FSSETDM_BY_HANDLE_32:
-		return xfs_compat_fssetdm_by_handle(filp, arg);
 	default:
-		return -ENOIOCTLCMD;
+		/* try the native version */
+		return xfs_file_ioctl(filp, cmd, (unsigned long)arg);
 	}
 }

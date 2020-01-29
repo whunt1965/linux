@@ -162,7 +162,7 @@
 #endif
 
 #ifdef CONFIG_ARC_HAS_ACCL_REGS
-	ST2	r58, r59, PT_sp + 12
+	ST2	r58, r59, PT_r58
 #endif
 
 .endm
@@ -172,8 +172,8 @@
 
 	LD2	gp, fp, PT_r26		; gp (r26), fp (r27)
 
-	ld	r12, [sp, PT_sp + 4]
-	ld	r30, [sp, PT_sp + 8]
+	ld	r12, [sp, PT_r12]
+	ld	r30, [sp, PT_r30]
 
 	; Restore SP (into AUX_USER_SP) only if returning to U mode
 	;  - for K mode, it will be implicitly restored as stack is unwound
@@ -190,7 +190,7 @@
 #endif
 
 #ifdef CONFIG_ARC_HAS_ACCL_REGS
-	LD2	r58, r59, PT_sp + 12
+	LD2	r58, r59, PT_r58
 #endif
 .endm
 
@@ -256,7 +256,7 @@
 
 .macro FAKE_RET_FROM_EXCPN
 	lr      r9, [status32]
-	bic     r9, r9, (STATUS_U_MASK|STATUS_DE_MASK|STATUS_AE_MASK)
+	bic     r9, r9, STATUS_AE_MASK
 	or      r9, r9, STATUS_IE_MASK
 	kflag   r9
 .endm
