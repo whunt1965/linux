@@ -123,4 +123,10 @@ int ukl_mlock2(long start, size_t len, int flags);
 int ukl_tgkill(pid_t tgid, pid_t pid, int sig);
 pid_t ukl_getpid(void);
 int ukl_sendmmsg(int fd, struct mmsghdr *mmsg, unsigned int vlen, unsigned int flags);
+long ukl_mknod(const char * filename, umode_t mode, unsigned int dev);
+int ukl_mount(char * dev_name, char * dir_name, char * type, unsigned long flags, void * data);
+int ukl_chroot(const char * filename);
+int ukl_chdir(const char * filename);
+long ukl_openat(int dfd, const char * filename, int flags, umode_t mode);
+
 

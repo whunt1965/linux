@@ -476,7 +476,11 @@ out:
 	return error;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE1(chdir, const char __user *, filename)
+#else
+int __ukl_chdir(const char * filename)
+#endif
 {
 	return ksys_chdir(filename);
 }
@@ -536,7 +540,11 @@ out:
 	return error;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE1(chroot, const char __user *, filename)
+#else
+int __ukl_chroot(const char * filename)
+#endif
 {
 	return ksys_chroot(filename);
 }
@@ -1119,8 +1127,12 @@ SYSCALL_DEFINE3(open, const char __user *, filename, int, flags, umode_t, mode)
 	return do_sys_open(AT_FDCWD, filename, flags, mode);
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE4(openat, int, dfd, const char __user *, filename, int, flags,
 		umode_t, mode)
+#else
+long __ukl_openat(int dfd, const char * filename, int flags, umode_t mode)
+#endif
 {
 	if (force_o_largefile())
 		flags |= O_LARGEFILE;

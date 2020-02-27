@@ -3325,8 +3325,13 @@ struct dentry *mount_subtree(struct vfsmount *m, const char *name)
 }
 EXPORT_SYMBOL(mount_subtree);
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
 		char __user *, type, unsigned long, flags, void __user *, data)
+#else
+int __ukl_mount(char * dev_name, char * dir_name,
+		char * type, unsigned long flags, void * data)
+#endif
 {
 	int ret;
 	char *kernel_type;

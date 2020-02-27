@@ -554,7 +554,12 @@ static void flush_tlb_func_common(const struct flush_tlb_info *f,
 		 * This should be rare, with native_flush_tlb_others skipping
 		 * IPIs to lazy TLB mode CPUs.
 		 */
+#ifndef CONFIG_UNIKERNEL_LINUX
 		switch_mm_irqs_off(NULL, &init_mm, NULL);
+#else
+		// We are actively using user stack and init_mm has no user space 
+		switch_mm_irqs_off(NULL, current->active_mm, NULL);
+#endif
 		return;
 	}
 

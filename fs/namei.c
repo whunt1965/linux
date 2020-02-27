@@ -3731,7 +3731,11 @@ SYSCALL_DEFINE4(mknodat, int, dfd, const char __user *, filename, umode_t, mode,
 	return do_mknodat(dfd, filename, mode, dev);
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE3(mknod, const char __user *, filename, umode_t, mode, unsigned, dev)
+#else
+long __ukl_mknod(const char * filename, umode_t mode, unsigned int dev)
+#endif
 {
 	return do_mknodat(AT_FDCWD, filename, mode, dev);
 }

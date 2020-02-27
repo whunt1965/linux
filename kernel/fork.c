@@ -2403,6 +2403,7 @@ long _do_fork(struct kernel_clone_args *args)
 	struct task_struct *p;
 	int trace = 0;
 	long nr;
+	int i = 0;
 
 	// if (clone_flags & CLONE_UKL){
 	// 	return 1;
@@ -2428,7 +2429,7 @@ long _do_fork(struct kernel_clone_args *args)
 
 	p = copy_process(NULL, trace, NUMA_NO_NODE, args);
 	if (clone_flags & CLONE_UKL){
-		printk("Address of new thread's task_struct is 0x%lx\n", p);
+		printk("Address of thread's task_struct is 0x%lx\n", p);
 	}
 	add_latent_entropy();
 

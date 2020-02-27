@@ -46,6 +46,8 @@
 
 #include "process.h"
 
+asmlinkage void __child_return(void);
+
 /*
  * per-CPU TSS segments. Threads are completely 'soft' on Linux,
  * no more per-task TSS's. The TSS size is kept cacheline-aligned
