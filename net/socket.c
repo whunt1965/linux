@@ -2211,8 +2211,12 @@ out_put:
 	return err;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_getsockopt(int fd, int level, int optname, char __user * optval, int * optlen)
+#else
 SYSCALL_DEFINE5(getsockopt, int, fd, int, level, int, optname,
 		char __user *, optval, int __user *, optlen)
+#endif
 {
 	return __sys_getsockopt(fd, level, optname, optval, optlen);
 }

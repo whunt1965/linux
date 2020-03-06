@@ -49,6 +49,8 @@
 #include <linux/gfp.h>
 #include <linux/utsname.h>
 #include <linux/sched/task.h>
+#include <linux/signal.h>
+#include <linux/signal_types.h>
 
 #include <linux/socket.h>
 #include <uapi/linux/in.h>
@@ -128,5 +130,6 @@ int ukl_mount(char * dev_name, char * dir_name, char * type, unsigned long flags
 int ukl_chroot(const char * filename);
 int ukl_chdir(const char * filename);
 long ukl_openat(int dfd, const char * filename, int flags, umode_t mode);
+int ukl_getsockopt(int fd, int level, int optname, char __user * optval, int * optlen);
 
 
