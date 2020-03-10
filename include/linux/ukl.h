@@ -131,5 +131,7 @@ int ukl_chroot(const char * filename);
 int ukl_chdir(const char * filename);
 long ukl_openat(int dfd, const char * filename, int flags, umode_t mode);
 int ukl_getsockopt(int fd, int level, int optname, char __user * optval, int * optlen);
+long ukl_mkdir(const char *pathname, umode_t mode);
+void ukl_sync(void);
 
 

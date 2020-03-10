@@ -119,7 +119,11 @@ void ksys_sync(void)
 		laptop_sync_completion();
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE0(sync)
+#else
+void __ukl_sync(void)
+#endif
 {
 	ksys_sync();
 	return 0;

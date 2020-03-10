@@ -3796,7 +3796,11 @@ SYSCALL_DEFINE3(mkdirat, int, dfd, const char __user *, pathname, umode_t, mode)
 	return do_mkdirat(dfd, pathname, mode);
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE2(mkdir, const char __user *, pathname, umode_t, mode)
+#else
+long __ukl_mkdir(const char *pathname, umode_t mode)
+#endif
 {
 	return do_mkdirat(AT_FDCWD, pathname, mode);
 }
