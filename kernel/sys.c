@@ -898,7 +898,11 @@ SYSCALL_DEFINE0(getpid)
 }
 
 /* Thread ID - the internal kernel "pid" */
+#ifdef CONFIG_UNIKERNEL_LINUX
+pid_t __ukl_gettid(void)
+#else
 SYSCALL_DEFINE0(gettid)
+#endif
 {
 	return task_pid_vnr(current);
 }
