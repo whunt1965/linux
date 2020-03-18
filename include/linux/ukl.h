@@ -97,7 +97,7 @@ int ukl_setsockopt(int fd, int level, int optname, char *optval, int optlen);
 long ukl_arch_prctl(int option, unsigned long arg2);
 int ukl_get_thread_area(struct user_desc __user *u_info);
 int ukl_set_thread_area(struct user_desc __user *u_info);
-long ukl_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags, unsigned long fd, unsigned long off);
+unsigned long ukl_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags, unsigned long fd, unsigned long off);
 int ukl_set_tid_address(int * tidptr);
 int ukl_set_robust_list(struct robust_list_head * head, size_t len);
 int ukl_rt_sigprocmask(int how, sigset_t * nset,  sigset_t * oset, size_t sigsetsize);
