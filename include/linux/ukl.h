@@ -59,7 +59,7 @@
 #include <linux/sockios.h>		/* the SIOCxxx I/O controls	*/
 #include <linux/uio.h>			/* iovec support		*/
 #include <linux/types.h>		/* pid_t			*/
-#include <linux/compiler.h>		/* __user			*/
+#include <linux/compiler.h>		/* 			*/
 #include <uapi/linux/socket.h>
 
 #include <net/sock.h>
@@ -84,19 +84,19 @@ long ukl_open(const char* filename, int flags, unsigned short mode);
 long ukl_close(int fd);
 void ukl_exit_group(int error_code);
 int ukl_socket(int family, int type, int protocol);
-int ukl_bind(int fd, struct sockaddr __user *umyaddr, int addrlen);
-int ukl_connect(int fd, struct sockaddr __user *uservaddr, int addrlen);
+int ukl_bind(int fd, struct sockaddr  *umyaddr, int addrlen);
+int ukl_connect(int fd, struct sockaddr  *uservaddr, int addrlen);
 int ukl_listen(int fd, int backlog);
 int ukl_accept(int fd, struct sockaddr *upeer_sockaddr, int *upeer_addrlen);
 int ukl_ioctl(int fd, int cmd, long arg);
-int ukl_recvfrom(int fd, void __user *ubuf, size_t size, unsigned int flags, struct sockaddr __user *addr, int __user *addr_len);
+int ukl_recvfrom(int fd, void  *ubuf, size_t size, unsigned int flags, struct sockaddr  *addr, int  *addr_len);
 int ukl_sendto(int fd, void *buff, size_t len, unsigned int flags, struct sockaddr *addr, int addr_len);
-int ukl_recv(int fd, void __user *ubuf, size_t size, unsigned int flags);
+int ukl_recv(int fd, void  *ubuf, size_t size, unsigned int flags);
 int ukl_send(int fd, void *buff, size_t len, unsigned int flags);
 int ukl_setsockopt(int fd, int level, int optname, char *optval, int optlen);
 long ukl_arch_prctl(int option, unsigned long arg2);
-int ukl_get_thread_area(struct user_desc __user *u_info);
-int ukl_set_thread_area(struct user_desc __user *u_info);
+int ukl_get_thread_area(struct user_desc  *u_info);
+int ukl_set_thread_area(struct user_desc  *u_info);
 unsigned long ukl_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags, unsigned long fd, unsigned long off);
 int ukl_set_tid_address(int * tidptr);
 int ukl_set_robust_list(struct robust_list_head * head, size_t len);
@@ -104,7 +104,7 @@ int ukl_rt_sigprocmask(int how, sigset_t * nset,  sigset_t * oset, size_t sigset
 int ukl_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize);
 int ukl_prlimit64(pid_t pid, unsigned int resource, const struct rlimit64 * new_rlim, struct rlimit64 * old_rlim);
 unsigned long ukl_brk(unsigned long brk);
-int ukl_fstat(unsigned int fd, struct stat __user * statbuf);
+int ukl_fstat(unsigned int fd, struct stat  * statbuf);
 int ukl_mprotect(unsigned long start, size_t len, unsigned long prot);
 long ukl_clone(unsigned long clone_flags, unsigned long newsp, int * parent_tidptr, unsigned long tls, int * child_tidptr);
 int ukl_munmap(unsigned long addr, size_t len);
@@ -131,8 +131,10 @@ int ukl_mount(char * dev_name, char * dir_name, char * type, unsigned long flags
 int ukl_chroot(const char * filename);
 int ukl_chdir(const char * filename);
 long ukl_openat(int dfd, const char * filename, int flags, umode_t mode);
-int ukl_getsockopt(int fd, int level, int optname, char __user * optval, int * optlen);
+int ukl_getsockopt(int fd, int level, int optname, char  * optval, int * optlen);
 long ukl_mkdir(const char *pathname, umode_t mode);
 void ukl_sync(void);
+int ukl_select(int n, fd_set  * inp, fd_set  * outp, fd_set  * exp, struct __kernel_old_timeval  * tvp);
+int ukl_poll(struct pollfd * ufds, unsigned int nfds, int timeout_msecs);
 
 

@@ -719,8 +719,12 @@ static int kern_select(int n, fd_set __user *inp, fd_set __user *outp,
 	return poll_select_finish(&end_time, tvp, PT_TIMEVAL, ret);
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE5(select, int, n, fd_set __user *, inp, fd_set __user *, outp,
 		fd_set __user *, exp, struct __kernel_old_timeval __user *, tvp)
+#else
+int __ukl_select(int n, fd_set __user * inp, fd_set __user * outp, fd_set __user * exp, struct __kernel_old_timeval __user * tvp)
+#endif
 {
 	return kern_select(n, inp, outp, exp, tvp);
 }
@@ -1044,8 +1048,12 @@ static long do_restart_poll(struct restart_block *restart_block)
 	return ret;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE3(poll, struct pollfd __user *, ufds, unsigned int, nfds,
 		int, timeout_msecs)
+#else
+int __ukl_poll(struct pollfd __user * ufds, unsigned int nfds, int timeout_msecs)
+#endif
 {
 	struct timespec64 end_time, *to = NULL;
 	int ret;
