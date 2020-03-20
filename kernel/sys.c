@@ -2590,7 +2590,11 @@ out:
 	return 0;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE1(sysinfo, struct sysinfo __user *, info)
+#else
+int __ukl_sysinfo(struct sysinfo __user * info)
+#endif
 {
 	struct sysinfo val;
 

@@ -445,7 +445,8 @@ void iov_iter_init(struct iov_iter *i, unsigned int direction,
 	direction &= READ | WRITE;
 
 	/* It will get better.  Eventually... */
-	if (uaccess_kernel()) {
+	//if (uaccess_kernel()) {
+	if(iov->iov_base > 0x7FFFFFFFF000){
 		i->type = ITER_KVEC | direction;
 		i->kvec = (struct kvec *)iov;
 	} else {

@@ -2069,7 +2069,11 @@ SYSCALL_DEFINE1(epoll_create1, int, flags)
 	return do_epoll_create(flags);
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_epoll_create(int size)
+#else
 SYSCALL_DEFINE1(epoll_create, int, size)
+#endif
 {
 	if (size <= 0)
 		return -EINVAL;

@@ -1291,18 +1291,6 @@ void do_user_addr_fault(struct pt_regs *regs,
 
 	tsk = current;
 	mm = tsk->mm;
-/*
-	printk("\n\nIn do_user_addr_fault\n");
-	if(mm){
-		printk("mm->mmap_sem.count = %d", mm->mmap_sem.count);
-		printk("task_struct address = %lx", tsk);
-		printk("task_struct address = %lx", mm);
-		printk("task_struct address = %lx", &mm->mmap_sem);
-	}
-	//long unsigned int myrsp;
-	//asm("\t movq %%rsp,%0" : "=r"(myrsp));
-	printk("$rsp = %lx\n", regs->sp);
-*/	
 	/* kprobes don't want to hook the spurious faults: */
 	if (unlikely(kprobe_page_fault(regs, X86_TRAP_PF)))
 		return;

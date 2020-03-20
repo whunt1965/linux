@@ -136,5 +136,7 @@ long ukl_mkdir(const char *pathname, umode_t mode);
 void ukl_sync(void);
 int ukl_select(int n, fd_set  * inp, fd_set  * outp, fd_set  * exp, struct __kernel_old_timeval  * tvp);
 int ukl_poll(struct pollfd * ufds, unsigned int nfds, int timeout_msecs);
+int ukl_sysinfo(struct sysinfo * info);
+int ukl_epoll_create(int size);
 
 
