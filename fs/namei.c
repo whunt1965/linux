@@ -4606,20 +4606,31 @@ exit1:
 exit:
 	return error;
 }
-
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE5(renameat2, int, olddfd, const char __user *, oldname,
 		int, newdfd, const char __user *, newname, unsigned int, flags)
+#else
+int __ukl_renameat2(int olddfd, const char __user *oldname, int newdfd, const char __user *newname, unsigned int flags)
+#endif
 {
 	return do_renameat2(olddfd, oldname, newdfd, newname, flags);
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE4(renameat, int, olddfd, const char __user *, oldname,
 		int, newdfd, const char __user *, newname)
+#else
+int __ukl_renameat(int olddfd, const char __user *oldname, int newdfd, const char __user *newname)
+#endif
 {
 	return do_renameat2(olddfd, oldname, newdfd, newname, 0);
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE2(rename, const char __user *, oldname, const char __user *, newname)
+#else
+int __ukl_rename(const char __user *oldname, const char __user *newname)
+#endif
 {
 	return do_renameat2(AT_FDCWD, oldname, AT_FDCWD, newname, 0);
 }

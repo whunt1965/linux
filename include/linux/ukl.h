@@ -138,5 +138,8 @@ int ukl_select(int n, fd_set  * inp, fd_set  * outp, fd_set  * exp, struct __ker
 int ukl_poll(struct pollfd * ufds, unsigned int nfds, int timeout_msecs);
 int ukl_sysinfo(struct sysinfo * info);
 int ukl_epoll_create(int size);
+int ukl_renameat2(int olddfd, const char *oldname, int newdfd, const char *newname, unsigned int flags);
+int ukl_renameat(int olddfd, const char *oldname, int newdfd, const char *newname);
+int ukl_rename(const char *oldname, const char *newname);
 
 
