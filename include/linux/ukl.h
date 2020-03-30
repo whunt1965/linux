@@ -144,6 +144,6 @@ int ukl_epoll_create(int size);
 int ukl_renameat2(int olddfd, const char *oldname, int newdfd, const char *newname, unsigned int flags);
 int ukl_renameat(int olddfd, const char *oldname, int newdfd, const char *newname);
 int ukl_rename(const char *oldname, const char *newname);
-int ukl_getrusage(int who, struct rusage __user * ru);
+int ukl_getrusage(int who, struct rusage * ru);
 
 
