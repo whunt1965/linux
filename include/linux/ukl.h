@@ -73,6 +73,9 @@
 #include <linux/sys.h>
 #include <linux/futex.h>
 #include <linux/sched/mm.h>
+#include <vdso/vsyscall.h>
+#include <vdso/datapage.h>
+#include <asm/vdso/gettimeofday.h>
 
 void enter_ukl(void);
 void exit_ukl(void);
@@ -141,5 +144,6 @@ int ukl_epoll_create(int size);
 int ukl_renameat2(int olddfd, const char *oldname, int newdfd, const char *newname, unsigned int flags);
 int ukl_renameat(int olddfd, const char *oldname, int newdfd, const char *newname);
 int ukl_rename(const char *oldname, const char *newname);
+int ukl_getrusage(int who, struct rusage __user * ru);
 
 

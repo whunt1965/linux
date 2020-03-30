@@ -1795,7 +1795,11 @@ out:
 	r->ru_maxrss = maxrss * (PAGE_SIZE / 1024); /* convert pages to KBs */
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE2(getrusage, int, who, struct rusage __user *, ru)
+#else
+int __ukl_getrusage(int who, struct rusage __user * ru)
+#endif
 {
 	struct rusage r;
 
