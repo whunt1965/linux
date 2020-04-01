@@ -82,6 +82,12 @@ static int kvm_set_wallclock(const struct timespec64 *now)
 	return -ENODEV;
 }
 
+
+u64 ukl_kvm_clock_read(void)
+{
+	return pvclock_clocksource_read(this_cpu_pvti());
+}
+
 static u64 kvm_clock_read(void)
 {
 	u64 ret;
