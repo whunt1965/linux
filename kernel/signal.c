@@ -3635,7 +3635,11 @@ static inline void prepare_kill_siginfo(int sig, struct kernel_siginfo *info)
  *  @pid: the PID of the process
  *  @sig: signal to be sent
  */
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE2(kill, pid_t, pid, int, sig)
+#else
+int __ukl_kill(pid_t pid, int sig)
+#endif
 {
 	struct kernel_siginfo info;
 
@@ -4042,7 +4046,11 @@ do_sigaltstack (const stack_t *ss, stack_t *oss, unsigned long sp,
 	return 0;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE2(sigaltstack,const stack_t __user *,uss, stack_t __user *,uoss)
+#else
+int __ukl_sigaltstack (const stack_t __user *uss, stack_t __user *uoss)
+#endif
 {
 	stack_t new, old;
 	int err;
@@ -4461,7 +4469,11 @@ static int sigsuspend(sigset_t *set)
  *  @unewset: new signal mask value
  *  @sigsetsize: size of sigset_t type
  */
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE2(rt_sigsuspend, sigset_t __user *, unewset, size_t, sigsetsize)
+#else
+int __ukl_rt_sigsuspend(sigset_t __user * unewset, size_t sigsetsize)
+#endif
 {
 	sigset_t newset;
 

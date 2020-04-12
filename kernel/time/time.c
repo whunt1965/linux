@@ -205,8 +205,12 @@ int do_sys_settimeofday64(const struct timespec64 *tv, const struct timezone *tz
 	return 0;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE2(settimeofday, struct __kernel_old_timeval __user *, tv,
 		struct timezone __user *, tz)
+#else
+int __ukl_settimeofday(struct __kernel_old_timeval __user * tv, struct timezone __user * tz)
+#endif
 {
 	struct timespec64 new_ts;
 	struct timezone new_tz;

@@ -156,7 +156,9 @@ SECTIONS
 	X86_ALIGN_RODATA_END
 
 	/* Thread Local Storage sections */ 
-        .tdata : ALIGN(0x200000){
+        /* .tdata : ALIGN(0x200000){ */
+        . = ALIGN(PAGE_SIZE);
+        .tdata : ALIGN(0x200000){ 
                 __tls_data_start = .;
                 *(.tdata .tdata.* .gnu.linkonce.td.*)
                 __tls_data_end = .;

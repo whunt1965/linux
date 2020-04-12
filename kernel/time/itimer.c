@@ -109,8 +109,11 @@ static int put_itimerval(struct itimerval __user *o,
 	return copy_to_user(o, &v, sizeof(struct itimerval)) ? -EFAULT : 0;
 }
 
-
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE2(getitimer, int, which, struct itimerval __user *, value)
+#else
+int __ukl_getitimer(int which, struct itimerval __user * value)
+#endif
 {
 	struct itimerspec64 get_buffer;
 	int error = do_getitimer(which, &get_buffer);

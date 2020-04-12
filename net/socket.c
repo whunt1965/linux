@@ -1814,8 +1814,12 @@ int __sys_accept4(int fd, struct sockaddr __user *upeer_sockaddr,
 	return ret;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int __ukl_accept4(int fd, struct sockaddr __user *upeer_sockaddr, int __user *upeer_addrlen, int flags)
+#else
 SYSCALL_DEFINE4(accept4, int, fd, struct sockaddr __user *, upeer_sockaddr,
 		int __user *, upeer_addrlen, int, flags)
+#endif
 {
 	return __sys_accept4(fd, upeer_sockaddr, upeer_addrlen, flags);
 }
@@ -1924,8 +1928,12 @@ out:
 	return err;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE3(getsockname, int, fd, struct sockaddr __user *, usockaddr,
 		int __user *, usockaddr_len)
+#else
+int __ukl_getsockname(int fd, struct sockaddr __user *usockaddr, int __user *usockaddr_len)
+#endif
 {
 	return __sys_getsockname(fd, usockaddr, usockaddr_len);
 }
@@ -1960,8 +1968,12 @@ int __sys_getpeername(int fd, struct sockaddr __user *usockaddr,
 	return err;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE3(getpeername, int, fd, struct sockaddr __user *, usockaddr,
 		int __user *, usockaddr_len)
+#else
+int __ukl_getpeername(int fd, struct sockaddr __user *usockaddr, int __user *usockaddr_len)
+#endif
 {
 	return __sys_getpeername(fd, usockaddr, usockaddr_len);
 }
@@ -2681,8 +2693,12 @@ out:
 	return err;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE3(recvmsg, int, fd, struct user_msghdr __user *, msg,
 		unsigned int, flags)
+#else
+long __ukl_recvmsg(int fd, struct user_msghdr __user *msg, unsigned int flags)
+#endif
 {
 	return __sys_recvmsg(fd, msg, flags, true);
 }

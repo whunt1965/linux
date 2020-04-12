@@ -145,5 +145,23 @@ int ukl_renameat2(int olddfd, const char *oldname, int newdfd, const char *newna
 int ukl_renameat(int olddfd, const char *oldname, int newdfd, const char *newname);
 int ukl_rename(const char *oldname, const char *newname);
 int ukl_getrusage(int who, struct rusage * ru);
+int ukl_epoll_pwait(int epfd, struct epoll_event* events, int maxevents, int timeout, const sigset_t * sigmask, size_t sigsetsize);
+uid_t ukl_getuid(void);
+uid_t ukl_geteuid(void);
+gid_t ukl_getgid(void);
+gid_t ukl_getegid(void);
+off_t ukl_lseek(unsigned int fd, off_t offset, unsigned int whence);
+int ukl_getsockname(int fd, struct sockaddr *usockaddr, int *usockaddr_len);
+long ukl_recvmsg(int fd, struct user_msghdr *msg, unsigned int flags);
+int ukl_accept4(int fd, struct sockaddr *upeer_sockaddr, int *upeer_addrlen, int flags);
+int ukl_getpeername(int fd, struct sockaddr *usockaddr, int *usockaddr_len);
+int ukl_kill(pid_t pid, int sig);
+int ukl_rt_sigsuspend(sigset_t * unewset, size_t sigsetsize);
+int ukl_sigaltstack (const stack_t *uss, stack_t *uoss);
+ssize_t ukl_getrandom(char * buf, size_t count, unsigned int flags);
+int ukl_settimeofday(struct __kernel_old_timeval * tv, struct timezone * tz);
+int ukl_getitimer(int which, struct itimerval * value);
+
+
 
 

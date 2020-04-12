@@ -924,25 +924,41 @@ SYSCALL_DEFINE0(getppid)
 	return pid;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE0(getuid)
+#else
+uid_t __ukl_getuid(void)
+#endif
 {
 	/* Only we change this so SMP safe */
 	return from_kuid_munged(current_user_ns(), current_uid());
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE0(geteuid)
+#else
+uid_t __ukl_geteuid(void)
+#endif
 {
 	/* Only we change this so SMP safe */
 	return from_kuid_munged(current_user_ns(), current_euid());
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE0(getgid)
+#else
+gid_t __ukl_getgid(void)
+#endif
 {
 	/* Only we change this so SMP safe */
 	return from_kgid_munged(current_user_ns(), current_gid());
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE0(getegid)
+#else
+gid_t __ukl_getegid(void)
+#endif
 {
 	/* Only we change this so SMP safe */
 	return from_kgid_munged(current_user_ns(), current_egid());

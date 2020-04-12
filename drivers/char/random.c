@@ -2180,8 +2180,12 @@ const struct file_operations urandom_fops = {
 	.llseek = noop_llseek,
 };
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
 		unsigned int, flags)
+#else
+ssize_t __ukl_getrandom(char __user * buf, size_t count, unsigned int flags)
+#endif
 {
 	int ret;
 

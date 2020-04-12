@@ -318,8 +318,11 @@ off_t ksys_lseek(unsigned int fd, off_t offset, unsigned int whence)
 	fdput_pos(f);
 	return retval;
 }
-
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE3(lseek, unsigned int, fd, off_t, offset, unsigned int, whence)
+#else
+off_t __ukl_lseek(unsigned int fd, off_t offset, unsigned int whence)
+#endif
 {
 	return ksys_lseek(fd, offset, whence);
 }
