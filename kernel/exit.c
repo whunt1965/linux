@@ -711,9 +711,6 @@ static inline void check_stack_usage(void) {}
 void __noreturn do_exit(long code)
 {
 	struct task_struct *tsk = current;
-
-	printk("EXITING TASK 0x%lx\n", tsk);
-	
 	int group_dead;
 
 	profile_task_exit(tsk);
