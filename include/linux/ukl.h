@@ -161,6 +161,7 @@ int ukl_sigaltstack (const stack_t *uss, stack_t *uoss);
 ssize_t ukl_getrandom(char * buf, size_t count, unsigned int flags);
 int ukl_settimeofday(struct __kernel_old_timeval * tv, struct timezone * tz);
 int ukl_getitimer(int which, struct itimerval * value);
+long ukl_sendmsg(int fd, struct user_msghdr* msg, unsigned int flags);
 
 
 

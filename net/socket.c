@@ -2477,7 +2477,11 @@ out:
 	return err;
 }
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 SYSCALL_DEFINE3(sendmsg, int, fd, struct user_msghdr __user *, msg, unsigned int, flags)
+#else
+long __ukl_sendmsg(int fd, struct user_msghdr __user * msg, unsigned int flags)
+#endif
 {
 	return __sys_sendmsg(fd, msg, flags, true);
 }
