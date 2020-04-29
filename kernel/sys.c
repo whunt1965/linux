@@ -913,7 +913,11 @@ SYSCALL_DEFINE0(gettid)
  * value of ->real_parent under rcu_read_lock(), see
  * release_task()->call_rcu(delayed_put_task_struct).
  */
-SYSCALL_DEFINE0(getppid)
+#ifdef CONFIG_UNIKERNEL_LINUX
+pid_t __ukl_getppid(void)
+#else
+  SYSCALL_DEFINE0(getppid)
+#endif
 {
 	int pid;
 
