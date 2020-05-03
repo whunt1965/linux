@@ -131,6 +131,7 @@ int ukl_mlock(long start, size_t len);
 int ukl_mlock2(long start, size_t len, int flags);
 int ukl_tgkill(pid_t tgid, pid_t pid, int sig);
 pid_t ukl_getpid(void);
+pid_t ukl_getppid(void);
 pid_t ukl_gettid(void);
 int ukl_sendmmsg(int fd, struct mmsghdr *mmsg, unsigned int vlen, unsigned int flags);
 long ukl_mknod(const char * filename, umode_t mode, unsigned int dev);
