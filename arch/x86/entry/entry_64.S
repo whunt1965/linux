@@ -142,32 +142,53 @@ SYM_CODE_END(native_usergs_sysret64)
  * with them due to bugs in both AMD and Intel CPUs.
  */
 
+
+#ifdef CONFIG_UNIKERNEL_LINUX
+SYM_CODE_START(get_current_top_of_stack)
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rax
+	subq	$0xA8, %rax
+	retq
+SYM_CODE_END(get_current_top_of_stack)
+#endif
+
 SYM_CODE_START(entry_SYSCALL_64)
+#ifndef CONFIG_UNIKERNEL_LINUX
 	UNWIND_HINT_EMPTY
 	/*
 	 * Interrupts are off on entry.
 	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
 	 * it is too small to ever cause noticeable irq latency.
 	 */
+
 	swapgs
+#endif
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 
 	/* Construct struct pt_regs on stack */
-	pushq	$__KERNEL_DS				/* pt_regs->ss */
+	pushq	$__USER_DS				/* pt_regs->ss */
 	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
 	pushq	%r11					/* pt_regs->flags */
-	pushq	$__KERNEL_CS				/* pt_regs->cs */
+	pushq	$__USER_CS				/* pt_regs->cs */
 	pushq	%rcx					/* pt_regs->ip */
 SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	pushq	%rax					/* pt_regs->orig_ax */
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
+#else
+	PUSH_REGS rax=$-ENOSYS
+#endif
 
 	TRACE_IRQS_OFF
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
+	retq
+#endif
+	
 	/* IRQs are off. */
 	movq	%rax, %rdi
 	movq	%rsp, %rsi
@@ -209,7 +230,7 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	cmpq	%rcx, %r11
 	jne	swapgs_restore_regs_and_return_to_usermode
 
-	cmpq	$__KERNEL_CS, CS(%rsp)		/* CS must match SYSRET */
+	cmpq	$__USER_CS, CS(%rsp)		/* CS must match SYSRET */
 	jne	swapgs_restore_regs_and_return_to_usermode
 
 	movq	R11(%rsp), %r11
@@ -239,7 +260,7 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 
 	/* nothing to check for RSP */
 
-	cmpq	$__KERNEL_DS, SS(%rsp)		/* SS must match SYSRET */
+	cmpq	$__USER_DS, SS(%rsp)		/* SS must match SYSRET */
 	jne	swapgs_restore_regs_and_return_to_usermode
 
 	/*
@@ -657,7 +678,7 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 
 	/* Restore RDI. */
 	popq	%rdi
-	swapgs
+	SWAPGS
 	INTERRUPT_RETURN
 
 

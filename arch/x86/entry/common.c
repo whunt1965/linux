@@ -129,6 +129,16 @@ static long syscall_trace_enter(struct pt_regs *regs)
 	return ret ?: regs->orig_ax;
 }
 
+void ukl_handle_signals(void){
+        struct ksignal ksig;
+        void (*ukl_handler)(int,...);
+
+        while (get_signal(&ksig)) {
+                ukl_handler = (void*) ksig.ka.sa.sa_handler;
+                ukl_handler(ksig.sig, &ksig.info, &ksig.ka.sa.sa_restorer);
+        }
+}
+
 #define EXIT_TO_USERMODE_LOOP_FLAGS				\
 	(_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_UPROBE |	\
 	 _TIF_NEED_RESCHED | _TIF_USER_RETURN_NOTIFY | _TIF_PATCH_PENDING)
@@ -156,8 +166,13 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 			klp_update_patch_state(current);
 
 		/* deal with pending signal delivery */
-		if (cached_flags & _TIF_SIGPENDING)
+		if (cached_flags & _TIF_SIGPENDING){
+#ifndef CONFIG_UNIKERNEL_LINUX
 			do_signal(regs);
+#else
+			ukl_handle_signals();
+#endif
+		}
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
 			clear_thread_flag(TIF_NOTIFY_RESUME);
@@ -265,8 +280,9 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 	    WARN(irqs_disabled(), "syscall %ld left IRQs disabled", regs->orig_ax))
 		local_irq_enable();
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 	rseq_syscall(regs);
-
+#endif
 	/*
 	 * First do one-time work.  If these work items are enabled, we
 	 * want to run them exactly once per syscall exit with IRQs on.

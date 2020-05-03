@@ -25,6 +25,7 @@
 #include <linux/mm.h>
 #include <linux/fdtable.h>
 #include <linux/fsnotify.h>
+#include <linux/irqflags.h>
 #include <linux/module.h>
 #include <linux/tty.h>
 #include <linux/namei.h>
@@ -51,6 +52,9 @@
 #include <linux/sched/task.h>
 #include <linux/signal.h>
 #include <linux/signal_types.h>
+#include <asm/io_bitmap.h>
+#include <linux/context_tracking.h>
+#include <asm/thread_info.h>
 
 #include <linux/socket.h>
 #include <uapi/linux/in.h>
