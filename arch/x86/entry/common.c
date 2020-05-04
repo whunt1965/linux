@@ -280,9 +280,7 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 	    WARN(irqs_disabled(), "syscall %ld left IRQs disabled", regs->orig_ax))
 		local_irq_enable();
 
-#ifndef CONFIG_UNIKERNEL_LINUX
 	rseq_syscall(regs);
-#endif
 	/*
 	 * First do one-time work.  If these work items are enabled, we
 	 * want to run them exactly once per syscall exit with IRQs on.
