@@ -59,12 +59,19 @@ struct pt_regs;
  * named __ia32_sys_*()
  */
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+#define SYSCALL_DEFINE0(sname)                                          \
+	asmlinkage long __x64_sys_##sname(const struct pt_regs *__unused);\
+        asmlinkage long __ukl_##sname(void);				\
+        asmlinkage long __ukl_##sname(void)
+#else
 #define SYSCALL_DEFINE0(sname)						\
 	SYSCALL_METADATA(_##sname, 0);					\
 	asmlinkage long __x64_sys_##sname(const struct pt_regs *__unused);\
 	ALLOW_ERROR_INJECTION(__x64_sys_##sname, ERRNO);		\
 	SYSCALL_ALIAS(__ia32_sys_##sname, __x64_sys_##sname);		\
 	asmlinkage long __x64_sys_##sname(const struct pt_regs *__unused)
+#endif /* CONFIG_UNIKERNEL_LINUX */
 
 #define COND_SYSCALL(name)							\
 	asmlinkage __weak long __x64_sys_##name(const struct pt_regs *__unused)	\
@@ -191,6 +198,12 @@ struct pt_regs;
  * named __ia32_sys_*() which decodes the struct pt_regs *regs according
  * to the i386 calling convention (bx, cx, dx, si, di, bp).
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+#define __SYSCALL_DEFINEx(x, name, ...)					\
+	asmlinkage long __x64_sys##name(const struct pt_regs *regs);	\
+	asmlinkage long __ukl_##name(__MAP(x,__SC_DECL,__VA_ARGS__));	\
+	asmlinkage long __ukl_##name(__MAP(x,__SC_DECL,__VA_ARGS__))
+#else
 #define __SYSCALL_DEFINEx(x, name, ...)					\
 	asmlinkage long __x64_sys##name(const struct pt_regs *regs);	\
 	ALLOW_ERROR_INJECTION(__x64_sys##name, ERRNO);			\
@@ -209,6 +222,7 @@ struct pt_regs;
 		return ret;						\
 	}								\
 	static inline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))
+#endif /* CONFIG_UNIKERNEL_LINUX */
 
 /*
  * As the generic SYSCALL_DEFINE0() macro does not decode any parameters for
