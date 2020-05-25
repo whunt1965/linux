@@ -1378,27 +1378,26 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 1. Failed to acquire mmap_sem, and
 	 * 2. The access did not originate in userspace.
 	 */
-//	printk("1. Before the first if condition\n");
-	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
-//		printk("2. After the first if condition\n");
-		if (!user_mode(regs) && !search_exception_tables(regs->ip)) {
-//			printk("3. After the second if condition\n");
-			/*
-			 * Fault from code in kernel from
-			 * which we do not expect faults.
-			 */
-			bad_area_nosemaphore(regs, hw_error_code, address);
-			return;
-		}
+	if(current != atomic_long_read(&mm->mmap_sem.owner) && atomic_long_read(&mm->mmap_sem.count) != 1){
+		if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
+			/*if (!user_mode(regs) && !search_exception_tables(regs->ip)) {
+				/ *
+				 * Fault from code in kernel from
+				 * which we do not expect faults.
+				 * /
+				bad_area_nosemaphore(regs, hw_error_code, address);
+				return;
+			}*/
 retry:
-		down_read(&mm->mmap_sem);
-	} else {
-		/*
-		 * The above down_read_trylock() might have succeeded in
-		 * which case we'll have missed the might_sleep() from
-		 * down_read():
-		 */
-		might_sleep();
+			down_read(&mm->mmap_sem);
+		} else {
+			/*
+			 * The above down_read_trylock() might have succeeded in
+			 * which case we'll have missed the might_sleep() from
+			 * down_read():
+			 */
+			might_sleep();
+		}
 	}
 
 	vma = find_vma(mm, address);
@@ -1466,7 +1465,9 @@ good_area:
 		return;
 	}
 
-	up_read(&mm->mmap_sem);
+	if(current != atomic_long_read(&mm->mmap_sem.owner) && atomic_long_read(&mm->mmap_sem.count) != 1){
+		up_read(&mm->mmap_sem);
+	}
 	if (unlikely(fault & VM_FAULT_ERROR)) {
 		mm_fault_error(regs, hw_error_code, address, fault);
 		return;

@@ -1918,6 +1918,7 @@ SYM_CODE_START(__child_return)
 
 	movq	$0x0, %rax
 	movq	32(%rsp), %rsp
+	call	exit_ukl
 /*child_loop:
 	subq	$0x100, %rsp
 	movq	%rsp, 0(%rsp)
