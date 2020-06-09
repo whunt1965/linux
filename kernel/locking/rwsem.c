@@ -999,6 +999,9 @@ rwsem_down_read_slowpath(struct rw_semaphore *sem, int state)
 	DEFINE_WAKE_Q(wake_q);
 	bool wake = false;
 
+	//trace_printk("RSP curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
+	//ftrace_dump(1);
+	//tracing_on();
 	/*
 	 * Save the current read-owner of rwsem, if available, and the
 	 * reader nonspinnable bit.
@@ -1144,6 +1147,10 @@ rwsem_down_write_slowpath(struct rw_semaphore *sem, int state)
 	struct rwsem_waiter waiter;
 	struct rw_semaphore *ret = sem;
 	DEFINE_WAKE_Q(wake_q);
+	
+	//trace_printk("WSP curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
+	//ftrace_dump(1);
+	//tracing_on();
 
 	/* do optimistic spinning and steal lock if possible */
 	if (rwsem_can_spin_on_owner(sem, RWSEM_WR_NONSPINNABLE) &&
@@ -1340,6 +1347,7 @@ static struct rw_semaphore *rwsem_downgrade_wake(struct rw_semaphore *sem)
  */
 inline void __down_read(struct rw_semaphore *sem)
 {
+	//trace_printk("_DR curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
 	if (!rwsem_read_trylock(sem)) {
 		rwsem_down_read_slowpath(sem, TASK_UNINTERRUPTIBLE);
 		DEBUG_RWSEMS_WARN_ON(!is_rwsem_reader_owned(sem), sem);
@@ -1386,6 +1394,7 @@ static inline int __down_read_trylock(struct rw_semaphore *sem)
 static inline void __down_write(struct rw_semaphore *sem)
 {
 	long tmp = RWSEM_UNLOCKED_VALUE;
+	//trace_printk("_DW curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
 
 	if (unlikely(!atomic_long_try_cmpxchg_acquire(&sem->count, &tmp,
 						      RWSEM_WRITER_LOCKED)))
@@ -1493,6 +1502,8 @@ void __sched down_read(struct rw_semaphore *sem)
 {
 	might_sleep();
 	rwsem_acquire_read(&sem->dep_map, 0, 0, _RET_IP_);
+	
+	//trace_printk("DRN curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
 
 	LOCK_CONTENDED(sem, __down_read_trylock, __down_read);
 }
@@ -1517,10 +1528,12 @@ EXPORT_SYMBOL(down_read_killable);
  */
 int down_read_trylock(struct rw_semaphore *sem)
 {
+	//trace_printk("RT1 curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
 	int ret = __down_read_trylock(sem);
 
 	if (ret == 1)
 		rwsem_acquire_read(&sem->dep_map, 0, 1, _RET_IP_);
+	//trace_printk("RT2 curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
 	return ret;
 }
 EXPORT_SYMBOL(down_read_trylock);
@@ -1532,6 +1545,7 @@ void __sched down_write(struct rw_semaphore *sem)
 {
 	might_sleep();
 	rwsem_acquire(&sem->dep_map, 0, 0, _RET_IP_);
+	//trace_printk("DWN curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
 	LOCK_CONTENDED(sem, __down_write_trylock, __down_write);
 }
 EXPORT_SYMBOL(down_write);
@@ -1559,11 +1573,13 @@ EXPORT_SYMBOL(down_write_killable);
  */
 int down_write_trylock(struct rw_semaphore *sem)
 {
+	//trace_printk("WT2 curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
 	int ret = __down_write_trylock(sem);
 
 	if (ret == 1)
 		rwsem_acquire(&sem->dep_map, 0, 1, _RET_IP_);
 
+	//trace_printk("WT2 curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(sem), atomic_long_read(&sem->owner), atomic_long_read(&sem->count));
 	return ret;
 }
 EXPORT_SYMBOL(down_write_trylock);

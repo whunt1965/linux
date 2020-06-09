@@ -1277,6 +1277,22 @@ do_kern_addr_fault(struct pt_regs *regs, unsigned long hw_error_code,
 }
 NOKPROBE_SYMBOL(do_kern_addr_fault);
 
+/*
+ * Return just the real task structure pointer of the owner
+ */
+#define RWSEM_READER_OWNED	(1UL << 0)
+#define RWSEM_RD_NONSPINNABLE	(1UL << 1)
+#define RWSEM_WR_NONSPINNABLE	(1UL << 2)
+#define RWSEM_NONSPINNABLE	(RWSEM_RD_NONSPINNABLE | RWSEM_WR_NONSPINNABLE)
+#define RWSEM_OWNER_FLAGS_MASK	(RWSEM_READER_OWNED | RWSEM_NONSPINNABLE)
+#define RWSEM_WRITER_LOCKED	(1UL << 0)
+
+static inline struct task_struct *rwsem_owner(struct rw_semaphore *sem)
+{
+	return (struct task_struct *)
+		(atomic_long_read(&sem->owner) & ~RWSEM_OWNER_FLAGS_MASK);
+}
+
 /* Handle faults in the user portion of the address space */
 static inline
 void do_user_addr_fault(struct pt_regs *regs,
@@ -1288,6 +1304,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	struct mm_struct *mm;
 	vm_fault_t fault, major = 0;
 	unsigned int flags = FAULT_FLAG_ALLOW_RETRY | FAULT_FLAG_KILLABLE;
+	int readerwriter = 0;
 
 	tsk = current;
 	mm = tsk->mm;
@@ -1321,7 +1338,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * If we're in an interrupt, have no user context or are running
 	 * in a region with pagefaults disabled then we must not take the fault
 	 */
-	if (unlikely(faulthandler_disabled() || !mm)) {
+	if (unlikely(pagefault_disabled() || !mm)) {
 		bad_area_nosemaphore(regs, hw_error_code, address);
 		return;
 	}
@@ -1378,8 +1395,19 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 1. Failed to acquire mmap_sem, and
 	 * 2. The access did not originate in userspace.
 	 */
-	if(current != atomic_long_read(&mm->mmap_sem.owner) && atomic_long_read(&mm->mmap_sem.count) != 1){
+	if(current == rwsem_owner(&mm->mmap_sem) && (atomic_long_read(&mm->mmap_sem.count) & RWSEM_WRITER_LOCKED)){
+		// We already are the writer
+		up_write(&mm->mmap_sem);
+		readerwriter = 1; // We were writer. Need to get it back before leaving.
+	}else if(current == rwsem_owner(&mm->mmap_sem) && (atomic_long_read(&mm->mmap_sem.owner) & RWSEM_READER_OWNED)){
+		// We already are a reader. Dont do anything.
+		readerwriter = 2; // We are the reader
+	}
+	
+	//trace_printk("PFO curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(&mm->mmap_sem), atomic_long_read(&mm->mmap_sem.owner), atomic_long_read(&mm->mmap_sem.count));
+	if(readerwriter != 2){
 		if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
+			//trace_printk("PFI curr = 0x%lx owner = 0x%lx ownerbits = 0x%lx count = 0x%lx\n", current, rwsem_owner(&mm->mmap_sem), atomic_long_read(&mm->mmap_sem.owner), atomic_long_read(&mm->mmap_sem.count));
 			/*if (!user_mode(regs) && !search_exception_tables(regs->ip)) {
 				/ *
 				 * Fault from code in kernel from
@@ -1465,9 +1493,16 @@ good_area:
 		return;
 	}
 
-	if(current != atomic_long_read(&mm->mmap_sem.owner) && atomic_long_read(&mm->mmap_sem.count) != 1){
+	if(readerwriter != 2){
 		up_read(&mm->mmap_sem);
 	}
+
+	if(readerwriter == 1){
+		if (unlikely(!down_write_trylock(&mm->mmap_sem))) {
+                        down_write(&mm->mmap_sem);
+		}
+	}
+
 	if (unlikely(fault & VM_FAULT_ERROR)) {
 		mm_fault_error(regs, hw_error_code, address, fault);
 		return;
