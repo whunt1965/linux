@@ -164,9 +164,17 @@ SYM_CODE_START(entry_SYSCALL_64)
 #endif
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+#ifndef CONFIG_UNIKERNEL_LINUX
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+#endif
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+	movabsq $0x7FFFFFFFFFFF, %r11
+	cmpq    %r11, %rsp
+	ja	.kspace
+#endif
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+.kspace:	
 	/* Construct struct pt_regs on stack */
 	pushq	$__USER_DS				/* pt_regs->ss */
 	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
@@ -179,21 +187,33 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 #ifndef CONFIG_UNIKERNEL_LINUX
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
 #else
-	PUSH_REGS rax=$-ENOSYS
+	PUSH_REGS
 #endif
-
 	TRACE_IRQS_OFF
 
 #ifdef CONFIG_UNIKERNEL_LINUX
+	movq	%rsp, %r10
+	movabsq $0x7FFFFFFFFFFF, %r11
+        cmpq    %r11, %rsp
+        ja      .kspace2
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
-	retq
-#endif
-	
+.kspace2:
+	pushq	%r10
+	pushq	%rax
+#else	
 	/* IRQs are off. */
 	movq	%rax, %rdi
 	movq	%rsp, %rsi
+#endif
 	call	do_syscall_64		/* returns with IRQs disabled */
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+	addq    $0x8, %rsp
+	popq	%rsp
+	POP_REGS_UKL
+	movq    PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp	
+	retq
+#endif
 	TRACE_IRQS_IRETQ		/* we're about to change IF */
 
 	/*

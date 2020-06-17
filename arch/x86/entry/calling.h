@@ -190,6 +190,25 @@ For 32-bit we have the following conventions - kernel is built with
 	.endif
 .endm
 
+.macro POP_REGS_UKL 
+        popq %r15
+        popq %r14
+        popq %r13
+        popq %r12
+        popq %rbp
+        popq %rbx
+        popq %r11
+        popq %r10
+        popq %r9
+        popq %r8
+        addq $8, %rsp
+        popq %rcx
+        popq %rdx
+        popq %rsi
+        popq %rdi
+.endm
+
+
 #ifdef CONFIG_PAGE_TABLE_ISOLATION
 
 /*
