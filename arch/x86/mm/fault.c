@@ -1396,11 +1396,20 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 2. The access did not originate in userspace.
 	 */
 	if(current == rwsem_owner(&mm->mmap_sem) && (atomic_long_read(&mm->mmap_sem.count) & RWSEM_WRITER_LOCKED)){
+		//__die("mmap_sem deadlock", regs, hw_error_code);
 		// We already are the writer
+		//trace_printk("\n+++ PID %d We already are the writer +++\n", current->pid);
+		//ftrace_dump(1);
+		//tracing_on();
+		//dump_stack();
 		up_write(&mm->mmap_sem);
 		readerwriter = 1; // We were writer. Need to get it back before leaving.
 	}else if(current == rwsem_owner(&mm->mmap_sem) && (atomic_long_read(&mm->mmap_sem.owner) & RWSEM_READER_OWNED)){
 		// We already are a reader. Dont do anything.
+		//trace_printk("+++ PID %d We already are the reader +++\n", current->pid);
+		//ftrace_dump(1);
+		//tracing_on();
+		//dump_stack();
 		readerwriter = 2; // We are the reader
 	}
 	

@@ -387,11 +387,11 @@ int __die(const char *str, struct pt_regs *regs, long err)
 
 	show_regs(regs);
 	print_modules();
-
+/*
 	if (notify_die(DIE_OOPS, str, regs, err,
 			current->thread.trap_nr, SIGSEGV) == NOTIFY_STOP)
 		return 1;
-
+*/
 	return 0;
 }
 NOKPROBE_SYMBOL(__die);
@@ -419,6 +419,6 @@ void show_regs(struct pt_regs *regs)
 	/*
 	 * When in-kernel, we also print out the stack at the time of the fault..
 	 */
-	if (!user_mode(regs))
+	//if (!user_mode(regs))
 		show_trace_log_lvl(current, regs, NULL, KERN_DEFAULT);
 }
