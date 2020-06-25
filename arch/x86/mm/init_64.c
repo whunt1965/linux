@@ -1266,9 +1266,9 @@ void mark_rodata_ro(void)
 {
 	unsigned long start = PFN_ALIGN(_text);
 	unsigned long rodata_start = PFN_ALIGN(__start_rodata);
-	unsigned long end = (unsigned long)__end_rodata_hpage_align;
+	unsigned long end = (unsigned long) &__tls_bss_end;
 	unsigned long text_end = PFN_ALIGN(_etext);
-	unsigned long rodata_end = PFN_ALIGN(__end_rodata);
+	unsigned long rodata_end = PFN_ALIGN(&__tls_bss_end);
 	unsigned long all_end;
 
 	printk(KERN_INFO "Write protecting the kernel read-only data: %luk\n",
@@ -1290,7 +1290,7 @@ void mark_rodata_ro(void)
 	 * has been zapped already via cleanup_highmem().
 	 */
 	all_end = roundup((unsigned long)_brk_end, PMD_SIZE);
-	set_memory_nx(text_end, (all_end - text_end) >> PAGE_SHIFT);
+	set_memory_nx(rodata_start, (all_end - rodata_start) >> PAGE_SHIFT);
 
 	set_ftrace_ops_ro();
 
@@ -1301,11 +1301,12 @@ void mark_rodata_ro(void)
 	printk(KERN_INFO "Testing CPA: again\n");
 	set_memory_ro(start, (end-start) >> PAGE_SHIFT);
 #endif
-
+	/* FIXME: Calculate correct offsets to free pages below
 	free_kernel_image_pages("unused kernel image (text/rodata gap)",
 				(void *)text_end, (void *)rodata_start);
 	free_kernel_image_pages("unused kernel image (rodata/data gap)",
 				(void *)rodata_end, (void *)_sdata);
+	*/
 
 	debug_checkwx();
 }
