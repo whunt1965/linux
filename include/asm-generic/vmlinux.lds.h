@@ -924,6 +924,7 @@
 	*(.discard)							\
 	*(.discard.*)							\
 	*(.modinfo)							\
+	*(.gnu.glibc-stub.*)						\
 	}
 
 /**

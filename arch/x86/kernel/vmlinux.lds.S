@@ -101,6 +101,7 @@ jiffies_64 = jiffies;
 
 PHDRS {
 	text PT_LOAD FLAGS(5);          /* R_E */
+	tls PT_TLS FLAGS(6);            /* RW_ */
 	data PT_LOAD FLAGS(6);          /* RW_ */
 #ifdef CONFIG_X86_64
 #ifdef CONFIG_SMP
@@ -154,6 +155,19 @@ SECTIONS
 	X86_ALIGN_RODATA_BEGIN
 	RO_DATA(PAGE_SIZE)
 	X86_ALIGN_RODATA_END
+	
+	/* Thread Local Storage sections */ 
+        . = ALIGN(PAGE_SIZE);
+        .tdata : ALIGN(0x200000){ 
+                __tls_data_start = .;
+                *(.tdata .tdata.* .gnu.linkonce.td.*)
+                __tls_data_end = .;
+        } :tls    
+        .tbss : {  
+               __tls_bss_start = .;
+                *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) 
+                __tls_bss_end = .;
+        } :tls
 
 	/* Data */
 	.data : AT(ADDR(.data) - LOAD_OFFSET) {
@@ -362,8 +376,8 @@ SECTIONS
 		*(BSS_MAIN)
 		BSS_DECRYPTED
 		. = ALIGN(PAGE_SIZE);
-		__bss_stop = .;
 	}
+	__bss_stop = .;
 
 	/*
 	 * The memory occupied from _text to here, __end_of_kernel_reserve, is
