@@ -27,6 +27,10 @@
 #
 # System.map is generated to document addresses of all kernel symbols
 
+#FIXME: Need to get rid of this unresolved-symbols flag soon!
+#FIXME: Find a better way to link in UKL.a. Right now just going to ukl directory to get it.
+
+
 # Error out on error
 set -e
 
@@ -50,9 +54,11 @@ modpost_link()
 		--no-whole-archive				\
 		--start-group					\
 		${KBUILD_VMLINUX_LIBS}				\
+		../ukl/UKL.a					\
 		--end-group"
 
-	${LD} ${KBUILD_LDFLAGS} -r -o ${1} ${objects}
+#	${LD} ${KBUILD_LDFLAGS} -r -o ${1} ${objects}
+	${LD} ${KBUILD_LDFLAGS} --unresolved-symbols=ignore-all --allow-multiple-definition -r -o ${1} ${objects}
 }
 
 # Link of vmlinux
@@ -81,11 +87,17 @@ vmlinux_link()
 			--no-whole-archive			\
 			--start-group				\
 			${KBUILD_VMLINUX_LIBS}			\
+			../ukl/UKL.a				\
 			--end-group				\
 			${@}"
 
-		${LD} ${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}	\
-			${strip_debug#-Wl,}			\
+#		${LD} ${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}	\
+#			${strip_debug#-Wl,}			\
+#			-o ${output}				\
+#			-T ${lds} ${objects}
+		${LD} --unresolved-symbols=ignore-all 		\
+			--allow-multiple-definition		\ 
+			${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux} 	\
 			-o ${output}				\
 			-T ${lds} ${objects}
 	else
