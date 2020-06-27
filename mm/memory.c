@@ -4354,6 +4354,9 @@ retry_pud:
 vm_fault_t handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 		unsigned int flags)
 {
+	unsigned long ukl_state;
+	ukl_state = current->state;
+
 	vm_fault_t ret;
 
 	__set_current_state(TASK_RUNNING);
@@ -4392,6 +4395,8 @@ vm_fault_t handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 		if (task_in_memcg_oom(current) && !(ret & VM_FAULT_OOM))
 			mem_cgroup_oom_synchronize(false);
 	}
+
+	__set_current_state(ukl_state);
 
 	return ret;
 }
