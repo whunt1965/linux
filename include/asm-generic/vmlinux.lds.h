@@ -917,6 +917,7 @@
 	EXIT_DATA
 #endif
 
+#ifdef CONFIG_UNIKERNEL_LINUX
 #define DISCARDS							\
 	/DISCARD/ : {							\
 	EXIT_DISCARDS							\
@@ -926,6 +927,16 @@
 	*(.modinfo)							\
 	*(.gnu.glibc-stub.*)						\
 	}
+#else
+#define DISCARDS							\
+	/DISCARD/ : {							\
+	EXIT_DISCARDS							\
+	EXIT_CALL							\
+	*(.discard)							\
+	*(.discard.*)							\
+	*(.modinfo)							\
+	}
+#endif
 
 /**
  * PERCPU_INPUT - the percpu input sections

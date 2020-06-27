@@ -101,7 +101,9 @@ jiffies_64 = jiffies;
 
 PHDRS {
 	text PT_LOAD FLAGS(5);          /* R_E */
+#ifdef CONFIG_UNIKERNEL_LINUX
 	tls PT_TLS FLAGS(6);            /* RW_ */
+#endif
 	data PT_LOAD FLAGS(6);          /* RW_ */
 #ifdef CONFIG_X86_64
 #ifdef CONFIG_SMP
@@ -156,6 +158,7 @@ SECTIONS
 	RO_DATA(PAGE_SIZE)
 	X86_ALIGN_RODATA_END
 	
+#ifdef CONFIG_UNIKERNEL_LINUX
 	/* Thread Local Storage sections */ 
         . = ALIGN(PAGE_SIZE);
         .tdata : ALIGN(0x200000){ 
@@ -168,6 +171,7 @@ SECTIONS
                 *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) 
                 __tls_bss_end = .;
         } :tls
+#endif
 
 	/* Data */
 	.data : AT(ADDR(.data) - LOAD_OFFSET) {
@@ -376,8 +380,13 @@ SECTIONS
 		*(BSS_MAIN)
 		BSS_DECRYPTED
 		. = ALIGN(PAGE_SIZE);
+#ifdef CONFIG_UNIKERNEL_LINUX
 	}
 	__bss_stop = .;
+#else
+		__bss_stop = .;
+        }
+#endif
 
 	/*
 	 * The memory occupied from _text to here, __end_of_kernel_reserve, is
