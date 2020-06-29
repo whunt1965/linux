@@ -243,6 +243,26 @@ static void set_intr_gate(unsigned int n, const void *addr)
 	data.segment	= __KERNEL_CS;
 	data.bits.type	= GATE_INTERRUPT;
 	data.bits.p	= 1;
+	
+#ifdef CONFIG_UNIKERNEL_LINUX
+	if(n == X86_TRAP_PF){
+		/* 
+		 * This is done because a KVM guest uses async page fault instead of page 
+		 * fault and uses this function to populate the IDT. We need to update the
+		 * stack index here so instead of using kernelk stack, we use the exception 
+		 * stack
+		 */
+		/* 
+		 * FIXME: Maybe we can keep using IST but istead of using an exception stack,
+		 * we can use kernel stack by using default stack index in IDT. This would
+		 * save us a jump to exception stack and also make this more 'normal'.
+		 */
+		/* 
+		 * FIXME: Using debug stack. create a new page fault stack and use that 
+		 */
+		data.bits.ist   = IST_INDEX_DB + 1;
+	}
+#endif
 
 	idt_setup_from_table(idt_table, &data, 1, false);
 }
