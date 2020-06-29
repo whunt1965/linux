@@ -108,6 +108,7 @@ static int kernel_init(void *);
 
 extern void init_IRQ(void);
 extern void radix_tree_init(void);
+extern int interface(void);
 
 /*
  * Debug helper: via this flag we know that we are in 'early bootup code'
