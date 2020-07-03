@@ -226,7 +226,7 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
 
 #ifdef CONFIG_UNIKERNEL_LINUX
 #define __SYSCALL_DEFINEx(x, name, ...)					\
-	static inline long __ukl_##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
+	static inline long __attribute__((unused)) __ukl_##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
 	static inline long __ukl_##name(__MAP(x,__SC_DECL,__VA_ARGS__))
 #else
 #define __SYSCALL_DEFINEx(x, name, ...)					\
@@ -253,7 +253,7 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
  */
 #ifdef CONFIG_UNIKERNEL_LINUX
 #define SYSCALL_DEFINE0(sname)						\
-	static long __ukl_##sname(const struct pt_regs *__unused);	\
+	static long __attribute__((unused)) __ukl_##sname(const struct pt_regs *__unused);	\
 	static long __ukl_##sname(const struct pt_regs *__unused)
 #else
 #define SYSCALL_DEFINE0(sname)						\
