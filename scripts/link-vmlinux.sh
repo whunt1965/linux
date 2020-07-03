@@ -95,9 +95,11 @@ vmlinux_link()
 #			${strip_debug#-Wl,}			\
 #			-o ${output}				\
 #			-T ${lds} ${objects}
+
 		${LD} --unresolved-symbols=ignore-all 		\
-			--allow-multiple-definition		\ 
+			--allow-multiple-definition		\
 			${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux} 	\
+			${strip_debug#-Wl,}			\
 			-o ${output}				\
 			-T ${lds} ${objects}
 	else
