@@ -244,28 +244,42 @@ static void set_intr_gate(unsigned int n, const void *addr)
 	data.bits.type	= GATE_INTERRUPT;
 	data.bits.p	= 1;
 	
+	idt_setup_from_table(idt_table, &data, 1, false);
+}
+
 #ifdef CONFIG_UNIKERNEL_LINUX
-	if(n == X86_TRAP_PF){
-		/* 
-		 * This is done because a KVM guest uses async page fault instead of page 
-		 * fault and uses this function to populate the IDT. We need to update the
-		 * stack index here so instead of using kernelk stack, we use the exception 
-		 * stack
-		 */
-		/* 
-		 * FIXME: Maybe we can keep using IST but istead of using an exception stack,
-		 * we can use kernel stack by using default stack index in IDT. This would
-		 * save us a jump to exception stack and also make this more 'normal'.
-		 */
-		/* 
-		 * FIXME: Using debug stack. create a new page fault stack and use that 
-		 */
-		data.bits.ist   = IST_INDEX_DB + 1;
-	}
-#endif
+static void set_intr_gate_pf(unsigned int n, const void *addr)
+{
+	struct idt_data data;
+
+	BUG_ON(n > 0xFF);
+
+	memset(&data, 0, sizeof(data));
+	data.vector	= n;
+	data.addr	= addr;
+	data.segment	= __KERNEL_CS;
+	data.bits.type	= GATE_INTERRUPT;
+	data.bits.p	= 1;
+	
+	/* 
+	 * This is done because a KVM guest uses async page fault instead of page 
+	 * fault and uses this function to populate the IDT. We need to update the
+	 * stack index here so instead of using kernelk stack, we use the exception 
+	 * stack
+	 */
+	/* 
+	 * FIXME: Maybe we can keep using IST but istead of using an exception stack,
+	 * we can use kernel stack by using default stack index in IDT. This would
+	 * save us a jump to exception stack and also make this more 'normal'.
+	 */
+	/* 
+	 * FIXME: Using debug stack. create a new page fault stack and use that 
+	 */
+	data.bits.ist   = IST_INDEX_DB + 1;
 
 	idt_setup_from_table(idt_table, &data, 1, false);
 }
+#endif
 
 /**
  * idt_setup_early_traps - Initialize the idt table with early traps
@@ -380,7 +394,11 @@ void __init update_intr_gate(unsigned int n, const void *addr)
 {
 	if (WARN_ON_ONCE(!test_bit(n, system_vectors)))
 		return;
+#ifdef CONFIG_UNIKERNEL_LINUX
+	set_intr_gate_pf(n, addr);
+#else
 	set_intr_gate(n, addr);
+#endif
 }
 
 void alloc_intr_gate(unsigned int n, const void *addr)
