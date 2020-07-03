@@ -1317,14 +1317,16 @@ static void __init do_pre_smp_initcalls(void)
 
 static int run_init_process(const char *init_filename)
 {
-	const char *const *p;
 #ifdef CONFIG_UNIKERNEL_LINUX
 	kthread_run((void*)interface, NULL, "Interface and Kmain \n");
 	while(1){
 		current->state = TASK_INTERRUPTIBLE;
 		schedule();
 	}
+
+	return 0;
 #else
+	const char *const *p;
 	argv_init[0] = init_filename;
 	pr_info("Run %s as init process\n", init_filename);
 	pr_debug("  with arguments:\n");
