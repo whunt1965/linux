@@ -141,7 +141,46 @@ SYM_CODE_END(native_usergs_sysret64)
  * it deals with uncanonical addresses better. SYSRET has trouble
  * with them due to bugs in both AMD and Intel CPUs.
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+SYM_CODE_START(entry_SYSCALL_64)
+	pushq	%r11
+	movabsq $0x7FFFFFFFFFFF, %r11
+        cmpq    %r11, %rsp
+	popq	%r11
+        ja      .kspace
+	
+	/* tss.sp2 is scratch space. */
+	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+	
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 
+	/* Construct struct pt_regs on stack */
+	pushq	$__USER_DS				/* pt_regs->ss */
+	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
+	pushq	%r11					/* pt_regs->flags */
+	pushq	$__USER_CS				/* pt_regs->cs */
+	pushq	%rcx					/* pt_regs->ip */
+	pushq	%rax					/* pt_regs->orig_ax */
+
+	PUSH_AND_CLEAR_REGS
+	
+	TRACE_IRQS_OFF
+
+	/* IRQs are off. */
+	movq	%rax, %rdi
+	movq	%rsp, %rsi
+	call	do_syscall_64		/* returns with IRQs disabled */
+
+	TRACE_IRQS_ON			/* return enables interrupts */
+	
+	POP_REGS
+        movq    PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
+        retq
+.kspace:
+	call *%rax
+	retq
+SYM_CODE_END(entry_SYSCALL_64)
+#else
 SYM_CODE_START(entry_SYSCALL_64)
 	UNWIND_HINT_EMPTY
 	/*
@@ -274,6 +313,7 @@ syscall_return_via_sysret:
 	popq	%rsp
 	USERGS_SYSRET64
 SYM_CODE_END(entry_SYSCALL_64)
+#endif
 
 /*
  * %rdi: prev task
