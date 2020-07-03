@@ -926,6 +926,7 @@
 	*(.discard.*)							\
 	*(.modinfo)							\
 	*(.gnu.glibc-stub.*)						\
+	*(.gnu.warning.*)						\
 	}
 #else
 #define DISCARDS							\
