@@ -119,6 +119,7 @@ For 32-bit we have the following conventions - kernel is built with
 	pushq	%r13		/* pt_regs->r13 */
 	pushq	%r14		/* pt_regs->r14 */
 	pushq	%r15		/* pt_regs->r15 */
+#ifndef CONFIG_UNIKERNEL_LINUX
 	UNWIND_HINT_REGS
 
 	.if \save_ret
@@ -144,6 +145,7 @@ For 32-bit we have the following conventions - kernel is built with
 	xorl	%r14d, %r14d	/* nospec r14 */
 	xorl	%r15d, %r15d	/* nospec r15 */
 
+#endif
 .endm
 
 .macro POP_REGS pop_rdi=1 skip_r11rcx=0
