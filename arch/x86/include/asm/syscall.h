@@ -160,7 +160,11 @@ static inline int syscall_get_arch(struct task_struct *task)
 		? AUDIT_ARCH_I386 : AUDIT_ARCH_X86_64;
 }
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+void do_syscall_64(unsigned long (*ukl_call)(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long), struct pt_regs *regs);
+#else
 void do_syscall_64(unsigned long nr, struct pt_regs *regs);
+#endif
 void do_int80_syscall_32(struct pt_regs *regs);
 long do_fast_syscall_32(struct pt_regs *regs);
 
