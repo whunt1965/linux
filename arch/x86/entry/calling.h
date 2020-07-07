@@ -119,13 +119,13 @@ For 32-bit we have the following conventions - kernel is built with
 	pushq	%r13		/* pt_regs->r13 */
 	pushq	%r14		/* pt_regs->r14 */
 	pushq	%r15		/* pt_regs->r15 */
-#ifndef CONFIG_UNIKERNEL_LINUX
 	UNWIND_HINT_REGS
 
 	.if \save_ret
 	pushq	%rsi		/* return address on top of stack */
 	.endif
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 	/*
 	 * Sanitize registers of values that a speculation attack might
 	 * otherwise want to exploit. The lower registers are likely clobbered
