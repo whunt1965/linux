@@ -226,8 +226,8 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
 
 #ifdef CONFIG_UNIKERNEL_LINUX
 #define __SYSCALL_DEFINEx(x, name, ...)					\
-	long __attribute__((unused)) __ukl_##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
-	long __ukl_##name(__MAP(x,__SC_DECL,__VA_ARGS__))
+	long __attribute__((unused)) __ukl##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
+	long __ukl##name(__MAP(x,__SC_DECL,__VA_ARGS__))
 #else
 #define __SYSCALL_DEFINEx(x, name, ...)					\
 	static long __se_sys##name(__MAP(x,__SC_LONG,__VA_ARGS__));	\
