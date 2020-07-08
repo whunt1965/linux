@@ -177,7 +177,12 @@ SYM_CODE_START(entry_SYSCALL_64)
         movq    PER_CPU_VAR(cpu_tss_rw + TSS_sp2), %rsp
         retq
 .kspace:
+        PUSH_AND_CLEAR_REGS
+
 	call *%rax
+	movq %rax, RAX(%rsp)
+
+	POP_REGS
 	retq
 SYM_CODE_END(entry_SYSCALL_64)
 #else
@@ -668,7 +673,13 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	ud2
 1:
 #endif
+#ifdef CONFIG_UNIKERNEL_LINUX
+	POP_REGS
+	movq	0x20(%rsp), %rsp
+	retq
+#else
 	POP_REGS pop_rdi=0
+#endif
 
 	/*
 	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
