@@ -1046,20 +1046,40 @@ static void __init do_pre_smp_initcalls(void)
 
 static int run_init_process(const char *init_filename)
 {
-	#ifdef CONFIG_UNIKERNEL_LINUX
-	printk("No. %d In run_init_process\n",1);
-	kthread_run((void*)interface, NULL, "Interface and Kmain \n");
-	while(1){
-	      	current->state = TASK_INTERRUPTIBLE;
-	        schedule();
-	}
-        #else
+#ifdef CONFIG_UNIKERNEL_LINUX
+	argv_init[0] = init_filename;
+	ar_info("Run %s as init process\n", init_filename);
+
+	// We run exec to prep the user stack with argc,
+	// argv, envt vars, aux vecs, & strings. It's recommended
+	// to exec an empty elf.
+	do_execve(getname_kernel(init_filename),
+		(const char __user *const __user *)argv_init,
+		(const char __user *const __user *)envp_init);
+
+	// This is the hook to do UKL specific setup.
+	// This can be removed if we can do this setup
+	// during normal linux boot.
+	interface();
+
+	// We only do this to pick up data from the stack that
+	// exec prepared. There are many ways to do the same thing.
+	// One obvious choice would be to modify the segment table
+	// so the IRET returns directly into the unikernel.
+	asm ("movq %0, %%rsp;" : :"r"(current->mm->start_stack));
+
+	// Similarly, this could be done on the IRET.
+	asm("jmp _start"); // no return
+
+	return 0;
+
+#else
 	argv_init[0] = init_filename;
 	pr_info("Run %s as init process\n", init_filename);
 	return do_execve(getname_kernel(init_filename),
 		(const char __user *const __user *)argv_init,
 		(const char __user *const __user *)envp_init);
-	#endif
+#endif
 }
 
 static int try_to_run_init_process(const char *init_filename)
