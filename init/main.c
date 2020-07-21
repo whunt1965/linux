@@ -616,7 +616,8 @@ asmlinkage __visible void __init start_kernel(void)
 				  -1, -1, NULL, &unknown_bootoption);
 	if (!IS_ERR_OR_NULL(after_dashes))
 		parse_args("Setting init args", after_dashes, NULL, 0, -1, -1,
-			   NULL, set_init_arg);
+			   NULL, &unknown_bootoption);
+  // HACK My change ^
 
 	/*
 	 * These use large bootmem allocations and must precede
@@ -1044,22 +1045,77 @@ static void __init do_pre_smp_initcalls(void)
 		do_one_initcall(initcall_from_entry(fn));
 }
 
+// variable declaration; HACK
+/* extern int __attribute__((weak)) TU_PATH; */
+
+/* #define UKL_PATH */
 static int run_init_process(const char *init_filename)
 {
-	#ifdef CONFIG_UNIKERNEL_LINUX
-	printk("No. %d In run_init_process\n",1);
-	kthread_run((void*)interface, NULL, "Interface and Kmain \n");
-	while(1){
-	      	current->state = TASK_INTERRUPTIBLE;
-	        schedule();
-	}
-        #else
-	argv_init[0] = init_filename;
-	pr_info("Run %s as init process\n", init_filename);
-	return do_execve(getname_kernel(init_filename),
-		(const char __user *const __user *)argv_init,
-		(const char __user *const __user *)envp_init);
-	#endif
+  /* printk("Top of run_ini_process\n"); */
+  /* printk("current->flags is %x\n", current->flags); */
+  /* printk("current is %px\n", current); */
+
+  /* interface(); */
+  // comment!
+
+#ifdef UKL_PATH
+  /* if(0){ */
+    /* printk("Taking ukl path\n"); */
+
+    // This barfs in __pthread_initialize_minimal_internal 
+    /* interface(); */
+
+    // This seems to work
+    kthread_run((void*)interface, NULL, "Interface and Kmain \n");
+
+    /* printk("Old kthread dropping into while loop\n"); */
+    /* printk("current->flags is %x\n", current->flags); */
+
+    while(1){
+      // Would be cool to print here.
+      current->state = TASK_INTERRUPTIBLE;
+      schedule();
+    }
+
+    return 0;
+
+#else
+      pr_info("Run %s as init process\n", init_filename);
+      printk("interface lives at %px\n", interface);
+
+      argv_init[0] = init_filename;
+      do_execve(getname_kernel(init_filename),
+                (const char __user *const __user *)argv_init,
+                (const char __user *const __user *)envp_init);
+
+      /* printk("After exec \n"); */
+      /* printk("current->flags is %lx\n", current->flags); */
+
+      printk("Don't forget about your 2 glibc hacks and the pthread init\n");
+
+      // Can we even do this on the same thread?
+      // Should this be before or after exec?
+      interface();
+      /* kthread_run((void*) interface, NULL, "Interface and Kmain \n"); */
+
+      /* while(1){ */
+      /*   current->state = TASK_INTERRUPTIBLE; */
+      /*   schedule(); */
+      /* } */
+
+      // Grabbing user stack
+      printk("User stack at %lx\n",  current->mm->start_stack);
+      printk("Swizzling onto it, then jumping to main\n");
+
+      //Swizzle onto user stack then jump to _start().
+      asm ("movq %0, %%rsp;" : :"r"(current->mm->start_stack));
+
+      // no return
+      asm("jmp _start");
+
+      return 0;
+#endif
+  return 0;
 }
 
 static int try_to_run_init_process(const char *init_filename)
