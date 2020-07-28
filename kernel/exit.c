@@ -757,18 +757,19 @@ void __noreturn do_exit(long code)
 	acct_update_integrals(tsk);
 	group_dead = atomic_dec_and_test(&tsk->signal->live);
 	if (group_dead) {
-		printk("UKL exiting\n");
-		while(1){
-		        current->state = TASK_INTERRUPTIBLE;
-		        schedule();
-		}
 		/*
 		 * If the last thread of global init has exited, panic
 		 * immediately to get a useable coredump.
 		 */
-		if (unlikely(is_global_init(tsk)))
+		if (unlikely(is_global_init(tsk))){
+			printk("UKL exiting\n");
+			while(1){
+		       		current->state = TASK_INTERRUPTIBLE;
+		        	schedule();
+			}
 			panic("Attempted to kill init! exitcode=0x%08x\n",
 				tsk->signal->group_exit_code ?: (int)code);
+		}
 
 #ifdef CONFIG_POSIX_TIMERS
 		hrtimer_cancel(&tsk->signal->real_timer);
