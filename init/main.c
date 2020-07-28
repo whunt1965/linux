@@ -1317,15 +1317,6 @@ static void __init do_pre_smp_initcalls(void)
 
 static int run_init_process(const char *init_filename)
 {
-#ifdef CONFIG_UNIKERNEL_LINUX
-	kthread_run((void*)interface, NULL, "Interface and Kmain \n");
-	while(1){
-		current->state = TASK_INTERRUPTIBLE;
-		schedule();
-	}
-
-	return 0;
-#else
 	const char *const *p;
 	argv_init[0] = init_filename;
 	pr_info("Run %s as init process\n", init_filename);
@@ -1338,7 +1329,6 @@ static int run_init_process(const char *init_filename)
 	return do_execve(getname_kernel(init_filename),
 		(const char __user *const __user *)argv_init,
 		(const char __user *const __user *)envp_init);
-#endif
 }
 
 static int try_to_run_init_process(const char *init_filename)
