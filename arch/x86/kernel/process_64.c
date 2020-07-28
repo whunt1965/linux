@@ -377,16 +377,17 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
 {
 	WARN_ON_ONCE(regs != current_pt_regs());
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 	if (static_cpu_has(X86_BUG_NULL_SEG)) {
 		/* Loading zero below won't clear the base. */
 		loadsegment(fs, __USER_DS);
 		load_gs_index(__USER_DS);
 	}
-
 	loadsegment(fs, 0);
 	loadsegment(es, _ds);
 	loadsegment(ds, _ds);
 	load_gs_index(0);
+#endif
 
 	regs->ip		= new_ip;
 	regs->sp		= new_sp;
@@ -399,7 +400,8 @@ void
 start_thread(struct pt_regs *regs, unsigned long new_ip, unsigned long new_sp)
 {
 	start_thread_common(regs, new_ip, new_sp,
-			    __USER_CS, __USER_DS, 0);
+			    __KERNEL_CS, __KERNEL_DS, 0
+			    );
 }
 EXPORT_SYMBOL_GPL(start_thread);
 
