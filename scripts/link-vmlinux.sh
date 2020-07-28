@@ -51,10 +51,10 @@ modpost_link()
 
 	objects="--whole-archive				\
 		${KBUILD_VMLINUX_OBJS}				\
+		../ukl/UKL.a					\
 		--no-whole-archive				\
 		--start-group					\
 		${KBUILD_VMLINUX_LIBS}				\
-		../ukl/UKL.a					\
 		--end-group"
 
 #	${LD} ${KBUILD_LDFLAGS} -r -o ${1} ${objects}
@@ -84,10 +84,10 @@ vmlinux_link()
 	if [ "${SRCARCH}" != "um" ]; then
 		objects="--whole-archive			\
 			${KBUILD_VMLINUX_OBJS}			\
+			../ukl/UKL.a				\
 			--no-whole-archive			\
 			--start-group				\
 			${KBUILD_VMLINUX_LIBS}			\
-			../ukl/UKL.a				\
 			--end-group				\
 			${@}"
 
