@@ -757,6 +757,11 @@ void __noreturn do_exit(long code)
 	acct_update_integrals(tsk);
 	group_dead = atomic_dec_and_test(&tsk->signal->live);
 	if (group_dead) {
+		printk("UKL exiting\n");
+		while(1){
+		        current->state = TASK_INTERRUPTIBLE;
+		        schedule();
+		}
 		/*
 		 * If the last thread of global init has exited, panic
 		 * immediately to get a useable coredump.
