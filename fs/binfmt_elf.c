@@ -58,7 +58,13 @@
 #define elf_check_fdpic(ex) false
 #endif
 
+#define UKL_NO_ELF
+
+#ifdef CONFIG_UNIKERNEL_LINUX
+int load_elf_binary(struct linux_binprm *bprm);
+#else
 static int load_elf_binary(struct linux_binprm *bprm);
+#endif
 
 #ifdef CONFIG_USELIB
 static int load_elf_library(struct file *);
@@ -682,7 +688,11 @@ out:
  * libraries.  There is no binary dependent code anywhere else.
  */
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+int load_elf_binary(struct linux_binprm *bprm)
+#else
 static int load_elf_binary(struct linux_binprm *bprm)
+#endif
 {
 	struct file *interpreter = NULL; /* to shut gcc up */
  	unsigned long load_addr = 0, load_bias = 0;
@@ -697,7 +707,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
 	unsigned long interp_load_addr = 0;
 	unsigned long start_code, end_code, start_data, end_data;
 	unsigned long reloc_func_desc __maybe_unused = 0;
-	int executable_stack = EXSTACK_DEFAULT;
+	int executable_stack = EXSTACK_DISABLE_X;
 	struct elfhdr *elf_ex = (struct elfhdr *)bprm->buf;
 	struct elfhdr *interp_elf_ex = NULL;
 	struct arch_elf_state arch_state = INIT_ARCH_ELF_STATE;
@@ -705,6 +715,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
 	struct pt_regs *regs;
 
 	retval = -ENOEXEC;
+#ifndef UKL_NO_ELF
 	/* First of all, some simple consistency checks */
 	if (memcmp(elf_ex->e_ident, ELFMAG, SELFMAG) != 0)
 		goto out;
@@ -842,12 +853,12 @@ out_free_interp:
 				&arch_state);
 	if (retval)
 		goto out_free_dentry;
+#endif
 
 	/* Flush all traces of the currently running executable */
 	retval = flush_old_exec(bprm);
 	if (retval)
 		goto out_free_dentry;
-
 	/* Do this immediately, since STACK_TOP as used in setup_arg_pages
 	   may depend on the personality.  */
 	SET_PERSONALITY2(*elf_ex, &arch_state);
@@ -875,6 +886,7 @@ out_free_interp:
 	start_data = 0;
 	end_data = 0;
 
+#ifndef UKL_NO_ELF
 	/* Now we do a little grungy work by mmapping the ELF image into
 	   the correct location in memory. */
 	for(i = 0, elf_ppnt = elf_phdata;
@@ -1031,7 +1043,9 @@ out_free_interp:
 			elf_brk = k;
 		}
 	}
-
+#else
+	load_bias = 0x405000; // random value which makes sense
+#endif
 	e_entry = elf_ex->e_entry + load_bias;
 	elf_bss += load_bias;
 	elf_brk += load_bias;
@@ -1052,7 +1066,7 @@ out_free_interp:
 		retval = -EFAULT; /* Nobody gets to see this, but.. */
 		goto out_free_dentry;
 	}
-
+#ifndef UKL_NO_ELF
 	if (interpreter) {
 		elf_entry = load_elf_interp(interp_elf_ex,
 					    interpreter,
@@ -1088,6 +1102,7 @@ out_free_interp:
 	kfree(elf_phdata);
 
 	set_binfmt(&elf_format);
+#endif
 
 #ifdef ARCH_HAS_SETUP_ADDITIONAL_PAGES
 	retval = arch_setup_additional_pages(bprm, !!interpreter);
@@ -1151,7 +1166,12 @@ out_free_interp:
 #endif
 
 	finalize_exec(bprm);
+#ifndef UKL_NO_ELF
 	start_thread(regs, elf_entry, bprm->p);
+#else
+	extern void _start (void);
+	start_thread(regs, (unsigned long) _start, bprm->p);
+#endif
 	retval = 0;
 out:
 	return retval;

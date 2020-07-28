@@ -72,6 +72,8 @@
 
 #include <trace/events/sched.h>
 
+#define UKL_NO_ELF
+
 int suid_dumpable = 0;
 
 static LIST_HEAD(formats);
@@ -1316,8 +1318,12 @@ int flush_old_exec(struct linux_binprm * bprm)
 	 * to be lockless.
 	 */
 	set_mm_exe_file(bprm->mm, bprm->file);
+	
+#ifdef UKL_NO_ELF
+	if(bprm->file)
+#endif
+		would_dump(bprm, bprm->file);
 
-	would_dump(bprm, bprm->file);
 
 	/*
 	 * Release all of the old mmap stuff
@@ -1696,6 +1702,7 @@ EXPORT_SYMBOL(remove_arg_zero);
  */
 int search_binary_handler(struct linux_binprm *bprm)
 {
+#ifndef UKL_NO_ELF
 	bool need_retry = IS_ENABLED(CONFIG_MODULES);
 	struct linux_binfmt *fmt;
 	int retval;
@@ -1746,6 +1753,10 @@ int search_binary_handler(struct linux_binprm *bprm)
 	}
 
 	return retval;
+#else
+	extern int load_elf_binary(struct linux_binprm *bprm);
+	return load_elf_binary(bprm);
+#endif
 }
 EXPORT_SYMBOL(search_binary_handler);
 
@@ -1819,15 +1830,18 @@ static int __do_execve_file(int fd, struct filename *filename,
 	check_unsafe_exec(bprm);
 	current->in_execve = 1;
 
+#ifndef UKL_NO_ELF
 	if (!file)
 		file = do_open_execat(fd, filename, flags);
 	retval = PTR_ERR(file);
 	if (IS_ERR(file))
 		goto out_unmark;
+#endif
 
 	sched_exec();
 
 	bprm->file = file;
+#ifndef UKL_NO_ELF
 	if (!filename) {
 		bprm->filename = "none";
 	} else if (fd == AT_FDCWD || filename->name[0] == '/') {
@@ -1851,6 +1865,9 @@ static int __do_execve_file(int fd, struct filename *filename,
 			bprm->interp_flags |= BINPRM_FLAGS_PATH_INACCESSIBLE;
 		bprm->filename = pathbuf;
 	}
+#else
+	bprm->filename = "UKL";
+#endif
 	bprm->interp = bprm->filename;
 
 	retval = bprm_mm_init(bprm);
@@ -1860,10 +1877,11 @@ static int __do_execve_file(int fd, struct filename *filename,
 	retval = prepare_arg_pages(bprm, argv, envp);
 	if (retval < 0)
 		goto out;
-
+#ifndef UKL_NO_ELF
 	retval = prepare_binprm(bprm);
 	if (retval < 0)
 		goto out;
+#endif
 
 	retval = copy_strings_kernel(1, &bprm->filename, bprm);
 	if (retval < 0)
