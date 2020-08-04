@@ -170,11 +170,11 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 
 		/* deal with pending signal delivery */
 		if (cached_flags & _TIF_SIGPENDING)
-#ifdef CONFIG_UNIKERNEL_LINUX
-			ukl_handle_signals();
-#else		
+//#ifdef CONFIG_UNIKERNEL_LINUX
+//			ukl_handle_signals();
+//#else		
 			do_signal(regs);
-#endif
+//#endif
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
 			clear_thread_flag(TIF_NOTIFY_RESUME);
