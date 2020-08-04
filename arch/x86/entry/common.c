@@ -296,11 +296,7 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 }
 
 #ifdef CONFIG_X86_64
-#ifdef CONFIG_UNIKERNEL_LINUX
-__visible void do_syscall_64(unsigned long (*ukl_call)(unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long), struct pt_regs *regs)
-#else
 __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
-#endif
 {
 	struct thread_info *ti;
 	int __attribute__ ((unused)) ignore;
@@ -309,10 +305,6 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 	local_irq_enable();
 	ti = current_thread_info();
 
-#ifdef CONFIG_UNIKERNEL_LINUX
-	if (READ_ONCE(ti->flags) & _TIF_SYSCALL_TRACE)
-		ignore = tracehook_report_syscall_entry(regs);
-#else
 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY)
 		nr = syscall_trace_enter(regs);
 
@@ -327,10 +319,6 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 		regs->ax = x32_sys_call_table[nr](regs);
 #endif
 	}
-#endif
-#ifdef CONFIG_UNIKERNEL_LINUX
-	regs->ax = (*ukl_call)(regs->di, regs->si,  regs->dx, regs->cx, regs->r8, regs->r9);
-#endif
 	syscall_return_slowpath(regs);
 }
 #endif
