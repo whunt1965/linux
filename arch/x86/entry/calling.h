@@ -125,7 +125,6 @@ For 32-bit we have the following conventions - kernel is built with
 	pushq	%rsi		/* return address on top of stack */
 	.endif
 
-#ifndef CONFIG_UNIKERNEL_LINUX
 	/*
 	 * Sanitize registers of values that a speculation attack might
 	 * otherwise want to exploit. The lower registers are likely clobbered
@@ -145,7 +144,6 @@ For 32-bit we have the following conventions - kernel is built with
 	xorl	%r14d, %r14d	/* nospec r14 */
 	xorl	%r15d, %r15d	/* nospec r15 */
 
-#endif
 .endm
 
 .macro POP_REGS pop_rdi=1 skip_r11rcx=0
