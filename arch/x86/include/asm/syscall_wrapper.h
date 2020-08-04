@@ -224,11 +224,6 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
 
 #endif /* CONFIG_COMPAT */
 
-#ifdef CONFIG_UNIKERNEL_LINUX
-#define __SYSCALL_DEFINEx(x, name, ...)					\
-	long __attribute__((unused)) __ukl##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
-	long __ukl##name(__MAP(x,__SC_DECL,__VA_ARGS__))
-#else
 #define __SYSCALL_DEFINEx(x, name, ...)					\
 	static long __se_sys##name(__MAP(x,__SC_LONG,__VA_ARGS__));	\
 	static inline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
@@ -242,7 +237,6 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
 		return ret;						\
 	}								\
 	static inline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))
-#endif
 
 /*
  * As the generic SYSCALL_DEFINE0() macro does not decode any parameters for
@@ -251,18 +245,12 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
  * SYSCALL_DEFINEx() -- which is essential for the COND_SYSCALL() and SYS_NI()
  * macros to work correctly.
  */
-#ifdef CONFIG_UNIKERNEL_LINUX
-#define SYSCALL_DEFINE0(sname)						\
-	static long __attribute__((unused)) __ukl_##sname(const struct pt_regs *__unused);	\
-	static long __ukl_##sname(const struct pt_regs *__unused)
-#else
 #define SYSCALL_DEFINE0(sname)						\
 	SYSCALL_METADATA(_##sname, 0);					\
 	static long __do_sys_##sname(const struct pt_regs *__unused);	\
 	__X64_SYS_STUB0(sname)						\
 	__IA32_SYS_STUB0(sname)						\
 	static long __do_sys_##sname(const struct pt_regs *__unused)
-#endif
 
 #define COND_SYSCALL(name)						\
 	__X64_COND_SYSCALL(name)					\
