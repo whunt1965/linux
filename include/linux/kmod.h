@@ -28,8 +28,8 @@ int __request_module(bool wait, const char *name, ...);
 #define try_then_request_module(x, mod...) \
 	((x) ?: (__request_module(true, mod), (x)))
 #else
-#define request_module(mod...) -1
-#define request_module_nowait(mod...) -1
+static inline int request_module(const char *name, ...) { return -ENOSYS; }
+static inline int request_module_nowait(const char *name, ...) { return -ENOSYS; }
 #define try_then_request_module(x, mod...) (x)
 #endif
 #else
