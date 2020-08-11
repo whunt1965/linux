@@ -142,8 +142,6 @@ SECTIONS
 		SOFTIRQENTRY_TEXT
 		*(.fixup)
 		*(.gnu.warning)
-		thread.o(.text)
-		thread.o(.init.text)
 
 #ifdef CONFIG_RETPOLINE
 		__indirect_thunk_start = .;
