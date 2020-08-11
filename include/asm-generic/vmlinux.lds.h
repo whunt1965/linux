@@ -556,7 +556,7 @@
 		*(.text..refcount)					\
 		*(.ref.text)						\
 	MEM_KEEP(init.text*)						\
-	MEM_KEEP(exit.text*)						\
+	MEM_KEEP(exit.text*)
 #else
 #define TEXT_TEXT							\
 		ALIGN_FUNCTION();					\
