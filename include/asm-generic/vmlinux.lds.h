@@ -548,14 +548,24 @@
  * code elimination is enabled, so these sections should be converted
  * to use ".." first.
  */
+#ifdef CONFIG_UNIKERNEL_LINUX
+#define TEXT_TEXT							\
+		ALIGN_FUNCTION();					\
+		*(.text.hot .text.hot.* TEXT_MAIN .stub .text.* .gnu.linkonce.t.* .text.fixup .text.unlikely .text.*_unlikely .text.unlikely.*)	\
+		*(.text.exit .text.exit.*) *(.text.startup .text.startup.*)	\
+		*(.text..refcount)					\
+		*(.ref.text)						\
+	MEM_KEEP(init.text*)						\
+	MEM_KEEP(exit.text*)						\
+#else
 #define TEXT_TEXT							\
 		ALIGN_FUNCTION();					\
 		*(.text.hot TEXT_MAIN .text.fixup .text.unlikely)	\
 		*(.text..refcount)					\
 		*(.ref.text)						\
 	MEM_KEEP(init.text*)						\
-	MEM_KEEP(exit.text*)						\
-
+	MEM_KEEP(exit.text*)
+#endif
 
 /* sched.text is aling to function alignment to secure we have same
  * address even at second ld pass when generating System.map */
