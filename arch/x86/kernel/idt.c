@@ -190,7 +190,7 @@ static const __initconst struct idt_data ist_idts[] = {
 #endif
 #ifdef CONFIG_UNIKERNEL_LINUX
 	/* FIXME: Instead of using debug stack for page faults, create a separate stack */
-	ISTG(X86_TRAP_PF,       page_fault,          IST_INDEX_DB),
+	ISTG(X86_TRAP_PF,       page_fault,          IST_INDEX_DF),
 #endif
 };
 
@@ -275,7 +275,7 @@ static void set_intr_gate_pf(unsigned int n, const void *addr)
 	/* 
 	 * FIXME: Using debug stack. create a new page fault stack and use that 
 	 */
-	data.bits.ist   = IST_INDEX_DB + 1;
+	data.bits.ist   = IST_INDEX_DF + 1;
 
 	idt_setup_from_table(idt_table, &data, 1, false);
 }
