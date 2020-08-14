@@ -128,8 +128,13 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
 	struct fork_frame *fork_frame;
 	struct pt_regs *childregs;
 	int ret = 0;
+	struct tss_struct *tss = this_cpu_ptr(&cpu_tss_rw);
 
-	childregs = task_pt_regs(p);
+	if (clone_flags & CLONE_UKL){
+		childregs = (struct pt_regs *) tss->x86_tss.sp2;
+	} else {
+		childregs = task_pt_regs(p);
+	}
 	fork_frame = container_of(childregs, struct fork_frame, regs);
 	frame = &fork_frame->frame;
 

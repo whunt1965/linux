@@ -166,7 +166,7 @@ SYM_CODE_START(entry_SYSCALL_64)
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+	/* movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp */
 
 #ifdef CONFIG_UNIKERNEL_LINUX
         /* Construct struct pt_regs on stack */
@@ -187,6 +187,7 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	pushq	%rax					/* pt_regs->orig_ax */
 
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
+	movq    %rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 
 	TRACE_IRQS_OFF
 
@@ -674,30 +675,34 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
 	 * Save old stack pointer and switch to trampoline stack.
 	 */
+	/*
 	movq	%rsp, %rdi
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
 	UNWIND_HINT_EMPTY
-
+	*/
 	/* Copy the IRET frame to the trampoline stack. */
-	pushq	6*8(%rdi)	/* SS */
-	pushq	5*8(%rdi)	/* RSP */
-	pushq	4*8(%rdi)	/* EFLAGS */
-	pushq	3*8(%rdi)	/* CS */
-	pushq	2*8(%rdi)	/* RIP */
-
+	/*
+	pushq	6*8(%rdi)	/ * SS * /
+	pushq	5*8(%rdi)	/ * RSP * /
+	pushq	4*8(%rdi)	/ * EFLAGS * /
+	pushq	3*8(%rdi)	/ * CS * /
+	pushq	2*8(%rdi)	/ * RIP * /
+	*/
 	/* Push user RDI on the trampoline stack. */
-	pushq	(%rdi)
+	/* pushq	(%rdi) */
 
 	/*
 	 * We are on the trampoline stack.  All regs except RDI are live.
 	 * We can do future final exit work right here.
 	 */
+	/*
 	STACKLEAK_ERASE_NOCLOBBER
 
 	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
-
+	*/
 	/* Restore RDI. */
 	popq	%rdi
+	addq	$8, %rsp /* need to get rid of orig_ax */
 #ifndef CONFIG_UNIKERNEL_LINUX
 	SWAPGS
 #else
