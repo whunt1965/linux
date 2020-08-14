@@ -130,11 +130,7 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
 	int ret = 0;
 	struct tss_struct *tss = this_cpu_ptr(&cpu_tss_rw);
 
-	if (clone_flags & CLONE_UKL){
-		childregs = (struct pt_regs *) tss->x86_tss.sp2;
-	} else {
-		childregs = task_pt_regs(p);
-	}
+	childregs = task_pt_regs(p);
 	fork_frame = container_of(childregs, struct fork_frame, regs);
 	frame = &fork_frame->frame;
 
@@ -170,7 +166,11 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
 	}
 
 	frame->bx = 0;
-	*childregs = *current_pt_regs();
+	if (clone_flags & CLONE_UKL){
+		*childregs = * (struct pt_regs *) tss->x86_tss.sp2;
+	} else {
+		*childregs = *current_pt_regs();
+	}
 	childregs->ax = 0;
 	if (sp)
 		childregs->sp = sp;
