@@ -1429,7 +1429,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 #endif
 retry:
         		asm("\t movq %%rsp,%0" : "=r"(myrsp));
-			printk("***\ndo_user_addr_fault\n\tThread %d on CPU %d \n\taddress = 0x%lx rsp = 0x%lx going to down_read the rwsem\n***\n", current->pid, raw_smp_processor_id(), address, myrsp);
+			//printk("***\ndo_user_addr_fault\n\tThread %d on CPU %d \n\taddress = 0x%lx rsp = 0x%lx going to down_read the rwsem\n***\n", current->pid, raw_smp_processor_id(), address, myrsp);
 			down_read(&mm->mmap_sem);
 		} else {
 			/*
