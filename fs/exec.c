@@ -799,7 +799,9 @@ int setup_arg_pages(struct linux_binprm *bprm,
 	ret = expand_stack(vma, stack_base);
 	if (ret)
 		ret = -EFAULT;
+#ifdef CONFIG_UNIKERNEL_LINUX
 
+#endif
 out_unlock:
 	up_write(&mm->mmap_sem);
 	return ret;

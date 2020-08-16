@@ -323,6 +323,28 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 }
 #endif
 
+void find_user_vma(unsigned long addr){
+	struct vm_area_struct *usv;
+	struct task_struct *tsk;
+	struct mm_struct *mm;
+	
+	tsk = current;
+	mm = tsk->mm;
+
+	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
+		down_read(&mm->mmap_sem);
+	}
+
+	usv = find_vma(mm, addr);
+
+	up_read(&mm->mmap_sem);
+
+	if(usv == NULL){
+		printk("Error: Could not find user stack vma!");
+	}
+	tsk->user_stack_vma = usv;
+}
+
 #if defined(CONFIG_X86_32) || defined(CONFIG_IA32_EMULATION)
 /*
  * Does a 32-bit syscall.  Called with IRQs on in CONTEXT_KERNEL.  Does

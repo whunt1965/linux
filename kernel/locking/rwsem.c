@@ -1083,6 +1083,7 @@ queue:
 
 	/* wait to be given the lock */
 	for (;;) {
+		printk("***\nrwsem_down_read_slowpath\n\tThread %d on CPU %d going into TASK_UNINTERRUPTIBLE state\n***\n", current->pid, raw_smp_processor_id());
 		set_current_state(state);
 		if (!smp_load_acquire(&waiter.task)) {
 			/* Matches rwsem_mark_wake()'s smp_store_release(). */
@@ -1206,6 +1207,7 @@ rwsem_down_write_slowpath(struct rw_semaphore *sem, int state)
 
 wait:
 	/* wait until we successfully acquire the lock */
+	printk("***\nrwsem_down_write_slowpath\n\tThread %d on CPU %d going into TASK_UNINTERRUPTIBLE state\n***\n", current->pid, raw_smp_processor_id());
 	set_current_state(state);
 	for (;;) {
 		if (rwsem_try_write_lock(sem, wstate)) {
