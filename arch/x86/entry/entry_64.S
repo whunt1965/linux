@@ -143,6 +143,11 @@ SYM_CODE_END(native_usergs_sysret64)
  */
 
 SYM_CODE_START(entry_SYSCALL_64)
+	cmpq	$1000, %rax
+	jb	1f
+	call	*%rax
+	retq
+1:
 	UNWIND_HINT_EMPTY
 	/*
 	 * Interrupts are off on entry.

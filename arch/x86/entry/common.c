@@ -295,6 +295,15 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 	prepare_exit_to_usermode(regs);
 }
 
+void set_ukl_run_to_completion(int val){
+       current->ukl_run_to_completion = val;
+}
+
+int get_ukl_run_to_completion(void){
+       return current->ukl_run_to_completion;
+}
+
+
 #ifdef CONFIG_X86_64
 __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 {
