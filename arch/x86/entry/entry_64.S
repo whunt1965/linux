@@ -162,7 +162,9 @@ SYM_CODE_START(entry_SYSCALL_64)
 	 */
 
 #ifdef CONFIG_UNIKERNEL_LINUX
+	pushq	%rax
 	call enter_kernel
+	popq 	%rax
         popq	%r10			/* this should be rcx, but we are not using 
 					 * syscall and we cant pollute rcx */
 #else
@@ -551,7 +553,14 @@ SYM_CODE_START(interrupt_entry)
 #ifdef CONFIG_UNIKERNEL_LINUX
         cmpl    $0, PER_CPU_VAR(in_kernel)
         jnz     1f
+	pushq	%rax
+	call	is_kthread
+	cmpq    $0, %rax
+	popq	%rax
+	jnz	1f
+	pushq	%rax
         call    enter_kernel
+	popq	%rax
         movq    $0x33, CS-ORIG_RAX+8(%rsp)
 1:
 #endif
@@ -655,17 +664,19 @@ ret_from_intr:
 	LEAVE_IRQ_STACK
 
 	testb	$3, CS(%rsp)
+	pushq	%rax
+	call	enter_kernel
+	popq	%rax
 	jz	retint_kernel
 
 	/* Interrupt came from user space */
 .Lretint_user:
+	mov	%rsp,%rdi
+	call	prepare_exit_to_usermode
 #ifdef CONFIG_UNIKERNEL_LINUX
         /* We know in_kernel is 1 right now and CS on the stack is user CS */
         movq    $0x10, CS(%rsp)
 #endif
-
-	mov	%rsp,%rdi
-	call	prepare_exit_to_usermode
 	TRACE_IRQS_ON
 
 SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
@@ -713,7 +724,9 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 #ifndef CONFIG_UNIKERNEL_LINUX
 	SWAPGS
 #else
+	pushq	%rax
 	call exit_kernel
+	popq	%rax
 #endif
 	INTERRUPT_RETURN
 
@@ -1049,7 +1062,9 @@ SYM_CODE_START(\sym)
 #ifdef CONFIG_UNIKERNEL_LINUX
         cmpl    $0, PER_CPU_VAR(in_kernel)
         jnz     1f
+	pushq	%rax
         call    enter_kernel
+	popq	%rax
         movq    $0x33, CS-ORIG_RAX(%rsp)
 1:
 #endif

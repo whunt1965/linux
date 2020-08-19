@@ -1661,12 +1661,16 @@ EXPORT_PER_CPU_SYMBOL(in_kernel);
  
 inline void enter_kernel(void)
 {
+    //if (current->ukl_run_to_completion == 0){
        this_cpu_write(in_kernel, 1);
+    //}
 }
  
 inline void exit_kernel(void)
 {
+    if (current->ukl_run_to_completion == 0){
        this_cpu_write(in_kernel, 0);
+    }
 }
 #endif
 

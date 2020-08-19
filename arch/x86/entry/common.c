@@ -43,8 +43,10 @@
 /* Called on entry from user mode with IRQs off. */
 __visible inline void enter_from_user_mode(void)
 {
+	if (current->ukl_run_to_completion == 0){
 	CT_WARN_ON(ct_state() != CONTEXT_USER);
 	user_exit_irqoff();
+	}
 }
 #else
 static inline void enter_from_user_mode(void) {}
@@ -170,11 +172,11 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 
 		/* deal with pending signal delivery */
 		if (cached_flags & _TIF_SIGPENDING)
-//#ifdef CONFIG_UNIKERNEL_LINUX
-//			ukl_handle_signals();
-//#else		
+#ifdef CONFIG_UNIKERNEL_LINUX
+			ukl_handle_signals();
+#else		
 			do_signal(regs);
-//#endif
+#endif
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
 			clear_thread_flag(TIF_NOTIFY_RESUME);
@@ -195,9 +197,18 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 	}
 }
 
+bool is_kthread(void){
+	return current->flags & PF_KTHREAD;
+}
+
 /* Called with IRQs disabled. */
 __visible inline void prepare_exit_to_usermode(struct pt_regs *regs)
 {
+	if(current->flags & PF_KTHREAD){
+		regs->cs = 0x10;
+		return;
+	}
+	if (current->ukl_run_to_completion == 0){
 	struct thread_info *ti = current_thread_info();
 	u32 cached_flags;
 
@@ -239,6 +250,9 @@ __visible inline void prepare_exit_to_usermode(struct pt_regs *regs)
 	user_enter_irqoff();
 
 	mds_user_clear_cpu_buffers();
+	} else {
+		regs->cs = 0x10;
+	}
 }
 
 #define SYSCALL_EXIT_WORK_FLAGS				\
@@ -273,6 +287,7 @@ static void syscall_slow_exit_work(struct pt_regs *regs, u32 cached_flags)
  */
 __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 {
+	if (current->ukl_run_to_completion == 0){
 	struct thread_info *ti = current_thread_info();
 	u32 cached_flags = READ_ONCE(ti->flags);
 
@@ -293,6 +308,9 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 
 	local_irq_disable();
 	prepare_exit_to_usermode(regs);
+	} else {
+		regs->cs = 0x10;
+	}
 }
 
 void set_ukl_run_to_completion(int val){
@@ -339,6 +357,8 @@ void find_user_vma(unsigned long addr){
 	
 	tsk = current;
 	mm = tsk->mm;
+
+	printk("Thread %d spawned task_struct 0x%lx signal->group_exit_code 0x%lx\n", current->pid, current, &current->signal->group_exit_code);
 
 	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
 		down_read(&mm->mmap_sem);
