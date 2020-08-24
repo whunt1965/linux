@@ -4354,6 +4354,10 @@ retry_pud:
 vm_fault_t handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 		unsigned int flags)
 {
+#ifdef CONFIG_UNIKERNEL_LINUX
+	unsigned long ukl_state;
+	ukl_state = current->state;
+#endif
 	vm_fault_t ret;
 
 	__set_current_state(TASK_RUNNING);
@@ -4392,7 +4396,9 @@ vm_fault_t handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 		if (task_in_memcg_oom(current) && !(ret & VM_FAULT_OOM))
 			mem_cgroup_oom_synchronize(false);
 	}
-
+#ifdef CONFIG_UNIKERNEL_LINUX
+	__set_current_state(ukl_state);
+#endif
 	return ret;
 }
 EXPORT_SYMBOL_GPL(handle_mm_fault);

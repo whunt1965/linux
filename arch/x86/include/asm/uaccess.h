@@ -23,7 +23,11 @@
 #define MAKE_MM_SEG(s)	((mm_segment_t) { (s) })
 
 #define KERNEL_DS	MAKE_MM_SEG(-1UL)
+#ifdef CONFIG_UNIKERNEL_LINUX
+#define USER_DS 	KERNEL_DS
+#else
 #define USER_DS 	MAKE_MM_SEG(TASK_SIZE_MAX)
+#endif
 
 #define get_fs()	(current->thread.addr_limit)
 static inline void set_fs(mm_segment_t fs)
