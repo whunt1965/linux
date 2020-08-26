@@ -454,6 +454,11 @@ static inline unsigned long cpu_kernelmode_gs_base(int cpu)
 }
 
 DECLARE_PER_CPU(unsigned int, irq_count);
+
+DECLARE_PER_CPU(int, in_kernel);
+inline void enter_kernel(void);
+inline void exit_kernel(void);
+
 extern asmlinkage void ignore_sysret(void);
 
 #if IS_ENABLED(CONFIG_KVM)
