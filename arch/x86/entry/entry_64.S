@@ -149,19 +149,32 @@ SYM_CODE_START(entry_SYSCALL_64)
 	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
 	 * it is too small to ever cause noticeable irq latency.
 	 */
-
+#ifdef CONFIG_UNIKERNEL_LINUX
+	call enter_kernel
+	popq   %r10                    /* this should be rcx, but we are not using 
+      	                                * syscall and we cant pollute rcx */
+#else
 	swapgs
+#endif
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 
 	/* Construct struct pt_regs on stack */
+#ifdef CONFIG_UNIKERNEL_LINUX
+	pushq	$__KERNEL_DS				/* pt_regs->ss */
+	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
+	pushfq						/* pt_regs->flags */
+	pushq	$__KERNEL_CS				/* pt_regs->cs */
+	pushq	%r10					/* pt_regs->ip */
+#else
 	pushq	$__USER_DS				/* pt_regs->ss */
 	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
 	pushq	%r11					/* pt_regs->flags */
 	pushq	$__USER_CS				/* pt_regs->cs */
 	pushq	%rcx					/* pt_regs->ip */
+#endif
 SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	pushq	%rax					/* pt_regs->orig_ax */
 
@@ -176,6 +189,9 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+	jmp	swapgs_restore_regs_and_return_to_usermode
+#endif
 	/*
 	 * Try to use SYSRET instead of IRET if we're returning to
 	 * a completely clean 64-bit userspace context.  If we're not,
@@ -515,9 +531,19 @@ SYM_CODE_START(interrupt_entry)
 	ASM_CLAC
 	cld
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+	cmpl    $0, PER_CPU_VAR(in_kernel)
+	jnz	1f
+	movq    $0x33, CS-ORIG_RAX+8(%rsp)
+1:
+#endif
 	testb	$3, CS-ORIG_RAX+8(%rsp)
 	jz	1f
+#ifdef CONFIG_UNIKERNEL_LINUX
+	call enter_kernel
+#else
 	SWAPGS
+#endif
 	FENCE_SWAPGS_USER_ENTRY
 	/*
 	 * Switch to the thread stack. The IRET frame and orig_ax are
@@ -616,6 +642,9 @@ ret_from_intr:
 
 	/* Interrupt came from user space */
 .Lretint_user:
+#ifdef CONFIG_UNIKERNEL_LINUX
+	movq    $0x10, CS(%rsp)
+#endif
 	mov	%rsp,%rdi
 	call	prepare_exit_to_usermode
 	TRACE_IRQS_ON
@@ -658,7 +687,11 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 
 	/* Restore RDI. */
 	popq	%rdi
+#ifdef CONFIG_UNIKERNEL_LINUX
+	call	exit_kernel
+#else
 	SWAPGS
+#endif
 	INTERRUPT_RETURN
 
 
@@ -739,6 +772,8 @@ native_irq_return_ldt:
 	 */
 
 	pushq	%rdi				/* Stash user RDI */
+1:
+	jmp 1b
 	SWAPGS					/* to kernel GS */
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rdi	/* to kernel CR3 */
 
@@ -769,6 +804,8 @@ native_irq_return_ldt:
 	orq	PER_CPU_VAR(espfix_stack), %rax
 
 	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
+1:
+        jmp 1b
 	SWAPGS					/* to user GS */
 	popq	%rdi				/* Restore user RDI */
 
@@ -985,6 +1022,13 @@ SYM_CODE_START(\sym)
 	.if \has_error_code == 0
 	pushq	$-1				/* ORIG_RAX: no syscall to restart */
 	.endif
+
+#ifdef CONFIG_UNIKERNEL_LINUX
+	cmpl    $0, PER_CPU_VAR(in_kernel)
+	jnz     1f
+	movq    $0x33, CS-ORIG_RAX(%rsp)
+1:
+#endif
 
 	.if \paranoid == 1
 	testb	$3, CS-ORIG_RAX(%rsp)		/* If coming from userspace, switch stacks */
@@ -1225,7 +1269,9 @@ SYM_CODE_START_LOCAL(paranoid_entry)
 	rdmsr
 	testl	%edx, %edx
 	js	1f				/* negative -> in kernel */
+#ifndef CONFIG_UNIKERNEL_LINUX
 	SWAPGS
+#endif
 	xorl	%ebx, %ebx
 
 1:
@@ -1272,7 +1318,9 @@ SYM_CODE_START_LOCAL(paranoid_exit)
 	TRACE_IRQS_IRETQ
 	/* Always restore stashed CR3 value (see paranoid_entry) */
 	RESTORE_CR3	scratch_reg=%rbx save_reg=%r14
+#ifndef CONFIG_UNIKERNEL_LINUX
 	SWAPGS_UNSAFE_STACK
+#endif
 	jmp	restore_regs_and_return_to_kernel
 .Lparanoid_exit_no_swapgs:
 	TRACE_IRQS_IRETQ_DEBUG
@@ -1296,7 +1344,11 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * We entered from user mode or we're pretending to have entered
 	 * from user mode due to an IRET fault.
 	 */
+#ifdef CONFIG_UNIKERNEL_LINUX
+	call	enter_kernel
+#else
 	SWAPGS
+#endif
 	FENCE_SWAPGS_USER_ENTRY
 	/* We have user CR3.  Change to kernel CR3. */
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
@@ -1337,7 +1389,9 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * gsbase and proceed.  We'll fix up the exception and land in
 	 * .Lgs_change's error handler with kernel gsbase.
 	 */
+#ifndef CONFIG_UNIKERNEL_LINUX
 	SWAPGS
+#endif
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
 	jmp .Lerror_entry_done
@@ -1352,7 +1406,9 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * We came from an IRET to user mode, so we have user
 	 * gsbase and CR3.  Switch to kernel gsbase and CR3:
 	 */
+#ifndef CONFIG_UNIKERNEL_LINUX
 	SWAPGS
+#endif
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
 
@@ -1443,7 +1499,9 @@ SYM_CODE_START(nmi)
 	 * stacks lest we corrupt the "NMI executing" variable.
 	 */
 
+#ifndef CONFIG_UNIKERNEL_LINUX
 	swapgs
+#endif
 	cld
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rdx
@@ -1689,7 +1747,9 @@ end_repeat_nmi:
 	testl	%ebx, %ebx			/* swapgs needed? */
 	jnz	nmi_restore
 nmi_swapgs:
+#ifndef CONFIG_UNIKERNEL_LINUX
 	SWAPGS_UNSAFE_STACK
+#endif
 nmi_restore:
 	POP_REGS
 
