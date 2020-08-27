@@ -647,7 +647,7 @@ struct task_struct {
 	randomized_struct_fields_start
 
 	void				*stack;
-#ifdef CONFIG_UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_NO_STACK_SWITCH
 	struct vm_area_struct		*user_stack_vma;
 #endif
 	refcount_t			usage;

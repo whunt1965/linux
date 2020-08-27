@@ -2571,7 +2571,7 @@ SYSCALL_DEFINE5(clone, unsigned long, clone_flags, unsigned long, newsp,
 #endif
 {
 	struct kernel_clone_args args = {
-#ifdef CONFIG_UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_NO_STACK_SWITCH
 		.flags		= (clone_flags & ~CSIGNAL),
 #else
 		.flags		= (lower_32_bits(clone_flags) & ~CSIGNAL),
