@@ -34,6 +34,11 @@ source "lib/Kconfig.debug"
 source "Documentation/Kconfig"
 
 config UNIKERNEL_LINUX
-       bool "Turn on UKL mode"
-       def_bool y
+	bool "Turn on UKL mode"
+	def_bool y
+
+config UKL_STACK_SWITCH
+	bool "Switch to kernel stack when entering the kernel"
+	depends on UNIKERNEL_LINUX
+	def_bool n
 
