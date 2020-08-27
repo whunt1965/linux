@@ -134,7 +134,7 @@ static long syscall_trace_enter(struct pt_regs *regs)
 	(_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_UPROBE |	\
 	 _TIF_NEED_RESCHED | _TIF_USER_RETURN_NOTIFY | _TIF_PATCH_PENDING)
 
-#ifdef CONFIG_UNIKERNEL_LINUX
+#ifdef UKL_STACK_SWITCH
 void ukl_handle_signals(void){
         struct ksignal ksig;
         void (*ukl_handler)(int,...);
@@ -170,11 +170,11 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 
 		/* deal with pending signal delivery */
 		if (cached_flags & _TIF_SIGPENDING)
-//#ifdef CONFIG_UNIKERNEL_LINUX
-//			ukl_handle_signals();
-//#else		
+#ifdef UKL_STACK_SWITCH
+			ukl_handle_signals();
+#else		
 			do_signal(regs);
-//#endif
+#endif
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
 			clear_thread_flag(TIF_NOTIFY_RESUME);
