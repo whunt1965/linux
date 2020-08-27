@@ -159,7 +159,9 @@ SYM_CODE_START(entry_SYSCALL_64)
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
+#ifndef CONFIG_UKL_NO_STACK_SWITCH
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+#endif
 
 	/* Construct struct pt_regs on stack */
 #ifdef CONFIG_UNIKERNEL_LINUX
@@ -179,6 +181,10 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	pushq	%rax					/* pt_regs->orig_ax */
 
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
+
+#ifdef CONFIG_UKL_NO_STACK_SWITCH
+	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+#endif
 
 	TRACE_IRQS_OFF
 
@@ -357,6 +363,10 @@ SYM_CODE_START(ret_from_fork)
 	UNWIND_HINT_REGS
 	movq	%rsp, %rdi
 	call	syscall_return_slowpath	/* returns with IRQs disabled */
+#ifdef CONFIG_UKL_NO_STACK_SWITCH
+	movq    19*8(%rsp), %rdi	
+	call    find_user_vma
+#endif
 	TRACE_IRQS_ON			/* user mode is traced as IRQS on */
 	jmp	swapgs_restore_regs_and_return_to_usermode
 
@@ -663,6 +673,7 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
 	 * Save old stack pointer and switch to trampoline stack.
 	 */
+#ifndef CONFIG_UKL_NO_STACK_SWITCH
 	movq	%rsp, %rdi
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
 	UNWIND_HINT_EMPTY
@@ -676,7 +687,7 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 
 	/* Push user RDI on the trampoline stack. */
 	pushq	(%rdi)
-
+	
 	/*
 	 * We are on the trampoline stack.  All regs except RDI are live.
 	 * We can do future final exit work right here.
@@ -684,9 +695,14 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	STACKLEAK_ERASE_NOCLOBBER
 
 	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
+#endif
 
 	/* Restore RDI. */
 	popq	%rdi
+#ifdef CONFIG_UKL_NO_STACK_SWITCH
+	addq    $8, %rsp /* need to get rid of orig_ax */
+#endif
+
 #ifdef CONFIG_UNIKERNEL_LINUX
 	call	exit_kernel
 #else
