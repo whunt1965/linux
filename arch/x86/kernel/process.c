@@ -128,7 +128,7 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
 	struct fork_frame *fork_frame;
 	struct pt_regs *childregs;
 	int ret = 0;
-#ifdef UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_STACK_SWITCH
 	struct tss_struct *tss = this_cpu_ptr(&cpu_tss_rw);
 #endif
 	childregs = task_pt_regs(p);
@@ -167,7 +167,7 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
 	}
 
 	frame->bx = 0;
-#ifdef UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_STACK_SWITCH
 	if (clone_flags & CLONE_UKL){
 		*childregs = * (struct pt_regs *) tss->x86_tss.sp2;
 	} else {

@@ -134,7 +134,7 @@ static long syscall_trace_enter(struct pt_regs *regs)
 	(_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_UPROBE |	\
 	 _TIF_NEED_RESCHED | _TIF_USER_RETURN_NOTIFY | _TIF_PATCH_PENDING)
 
-#ifdef UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_STACK_SWITCH
 void ukl_handle_signals(void){
         struct ksignal ksig;
         void (*ukl_handler)(int,...);
@@ -170,7 +170,7 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 
 		/* deal with pending signal delivery */
 		if (cached_flags & _TIF_SIGPENDING)
-#ifdef UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_STACK_SWITCH
 			ukl_handle_signals();
 #else		
 			do_signal(regs);
@@ -323,7 +323,7 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 }
 #endif
 
-#ifdef UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_STACK_SWITCH
 void find_user_vma(unsigned long addr){
 	struct vm_area_struct *usv;
 	struct task_struct *tsk;

@@ -1311,7 +1311,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	struct mm_struct *mm;
 	vm_fault_t fault, major = 0;
 	unsigned int flags = FAULT_FLAG_DEFAULT;
-#ifdef UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_STACK_SWITCH
 	struct vm_area_struct *usv;
 	long unsigned int myrsp;
 #endif
@@ -1396,7 +1396,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	}
 #endif
 
-#ifdef UKL_STACK_SWITCH
+#ifdef CONFIG_UKL_STACK_SWITCH
 	/* Checking if addr is a stack addr */
 	usv = tsk->user_stack_vma;
 	if (usv){
