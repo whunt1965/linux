@@ -1311,7 +1311,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	struct mm_struct *mm;
 	vm_fault_t fault, major = 0;
 	unsigned int flags = FAULT_FLAG_DEFAULT;
-#ifdef CONFIG_UKL_NO_STACK_SWITCH
+#ifdef CONFIG_UKL_SAME_STACK
 	struct vm_area_struct *usv;
 #endif
 	int get_rwsem_lock = 1;
@@ -1395,7 +1395,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	}
 #endif
 
-#ifdef CONFIG_UKL_NO_STACK_SWITCH
+#ifdef CONFIG_UKL_SAME_STACK
 	/* Checking if addr is a stack addr */
 	usv = tsk->user_stack_vma;
 	if (usv){
