@@ -279,6 +279,20 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 	prepare_exit_to_usermode(regs);
 }
 
+inline int get_in_user (void) __attribute__((always_inline));
+inline void enter_user (void) __attribute__((always_inline));
+inline void exit_user (void) __attribute__((always_inline));
+
+inline int get_in_user (void){
+	return current->in_user;
+}
+inline void enter_user (void){
+	current->in_user = 1;
+}
+inline void exit_user (void){
+	current->in_user = 0;
+}
+
 #ifdef CONFIG_X86_64
 __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 {
