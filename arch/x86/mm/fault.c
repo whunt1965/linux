@@ -1313,7 +1313,6 @@ void do_user_addr_fault(struct pt_regs *regs,
 	unsigned int flags = FAULT_FLAG_DEFAULT;
 #ifdef CONFIG_UKL_NO_STACK_SWITCH
 	struct vm_area_struct *usv;
-	long unsigned int myrsp;
 #endif
 	int get_rwsem_lock = 1;
 	
