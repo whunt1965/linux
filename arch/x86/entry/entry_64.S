@@ -150,7 +150,9 @@ SYM_CODE_START(entry_SYSCALL_64)
 	 * it is too small to ever cause noticeable irq latency.
 	 */
 #ifdef CONFIG_UNIKERNEL_LINUX
-	call enter_kernel
+	pushq	%rax
+	call	exit_user
+	popq	%rax
 	popq   %r10                    /* this should be rcx, but we are not using 
       	                                * syscall and we cant pollute rcx */
 #else
@@ -542,7 +544,10 @@ SYM_CODE_START(interrupt_entry)
 	cld
 
 #ifdef CONFIG_UNIKERNEL_LINUX
-	cmpl    $0, PER_CPU_VAR(in_kernel)
+	pushq   %rax
+	call    get_in_user
+	cmpq    $1, %rax
+	popq    %rax	
 	jnz	1f
 	movq    $0x33, CS-ORIG_RAX+8(%rsp)
 1:
@@ -550,7 +555,9 @@ SYM_CODE_START(interrupt_entry)
 	testb	$3, CS-ORIG_RAX+8(%rsp)
 	jz	1f
 #ifdef CONFIG_UNIKERNEL_LINUX
-	call enter_kernel
+	pushq   %rax
+	call    exit_user
+	popq    %rax
 #else
 	SWAPGS
 #endif
@@ -704,7 +711,9 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 #endif
 
 #ifdef CONFIG_UNIKERNEL_LINUX
-	call	exit_kernel
+	pushq   %rax
+	call    enter_user
+	popq    %rax
 #else
 	SWAPGS
 #endif
@@ -1040,7 +1049,10 @@ SYM_CODE_START(\sym)
 	.endif
 
 #ifdef CONFIG_UNIKERNEL_LINUX
-	cmpl    $0, PER_CPU_VAR(in_kernel)
+	pushq   %rax
+	call    get_in_user
+	cmpq    $1, %rax
+	popq    %rax
 	jnz     1f
 	movq    $0x33, CS-ORIG_RAX(%rsp)
 1:
@@ -1361,7 +1373,9 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * from user mode due to an IRET fault.
 	 */
 #ifdef CONFIG_UNIKERNEL_LINUX
-	call	enter_kernel
+	pushq   %rax
+	call    exit_user
+	popq    %rax
 #else
 	SWAPGS
 #endif

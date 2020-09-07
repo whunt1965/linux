@@ -649,6 +649,7 @@ struct task_struct {
 	void				*stack;
 #ifdef CONFIG_UKL_NO_STACK_SWITCH
 	struct vm_area_struct		*user_stack_vma;
+	int				in_user;
 #endif
 	refcount_t			usage;
 	/* Per task flags (PF_*), defined further below: */
