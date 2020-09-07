@@ -37,8 +37,8 @@ config UNIKERNEL_LINUX
 	bool "Turn on UKL mode"
 	def_bool y
 
-config UKL_NO_STACK_SWITCH
+config UKL_SAME_STACK
 	bool "Dont switch to kernel stack when entering the kernel"
 	depends on UNIKERNEL_LINUX
-	def_bool n
+	def_bool y
 

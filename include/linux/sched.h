@@ -647,10 +647,10 @@ struct task_struct {
 	randomized_struct_fields_start
 
 	void				*stack;
-#ifdef CONFIG_UKL_NO_STACK_SWITCH
+#ifdef CONFIG_UKL_SAME_STACK
 	struct vm_area_struct		*user_stack_vma;
-	int				in_user;
 #endif
+	int				in_user;
 	refcount_t			usage;
 	/* Per task flags (PF_*), defined further below: */
 	unsigned int			flags;

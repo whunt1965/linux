@@ -161,7 +161,7 @@ SYM_CODE_START(entry_SYSCALL_64)
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-#ifndef CONFIG_UKL_NO_STACK_SWITCH
+#ifndef CONFIG_UKL_SAME_STACK
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 #endif
 
@@ -184,7 +184,7 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
 
-#ifdef CONFIG_UKL_NO_STACK_SWITCH
+#ifdef CONFIG_UKL_SAME_STACK
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 #endif
 
@@ -365,7 +365,7 @@ SYM_CODE_START(ret_from_fork)
 	UNWIND_HINT_REGS
 	movq	%rsp, %rdi
 	call	syscall_return_slowpath	/* returns with IRQs disabled */
-#ifdef CONFIG_UKL_NO_STACK_SWITCH
+#ifdef CONFIG_UKL_SAME_STACK
 	movq    19*8(%rsp), %rdi	
 	call    find_user_vma
 #endif
@@ -680,7 +680,7 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
 	 * Save old stack pointer and switch to trampoline stack.
 	 */
-#ifndef CONFIG_UKL_NO_STACK_SWITCH
+#ifndef CONFIG_UKL_SAME_STACK
 	movq	%rsp, %rdi
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
 	UNWIND_HINT_EMPTY
@@ -706,7 +706,7 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 
 	/* Restore RDI. */
 	popq	%rdi
-#ifdef CONFIG_UKL_NO_STACK_SWITCH
+#ifdef CONFIG_UKL_SAME_STACK
 	addq    $8, %rsp /* need to get rid of orig_ax */
 #endif
 
