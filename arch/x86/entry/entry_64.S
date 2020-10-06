@@ -149,34 +149,57 @@ SYM_CODE_START(entry_SYSCALL_64)
 	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
 	 * it is too small to ever cause noticeable irq latency.
 	 */
-#ifdef CONFIG_UNIKERNEL_LINUX
-	pushq	%rax
-	call exit_user
-	popq	%rax
-	popq   %r10                    /* this should be rcx, but we are not using 
-      	                                * syscall and we cant pollute rcx */
-#else
-	swapgs
-#endif
+
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        je      1f
+
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    exit_user
+        popq    %rax
+	
+	movq	%rcx,	%r10		/* put the 4th argument in r10 so syscall_define macro */
+					/* downstream can work without modifications */
+	popq	%rcx               	/* so that RIP is in rcx and iret frame can form properly */
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 
 	/* Construct struct pt_regs on stack */
-#ifdef CONFIG_UNIKERNEL_LINUX
 	pushq	$__KERNEL_DS				/* pt_regs->ss */
 	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
 	pushfq						/* pt_regs->flags */
 	pushq	$__KERNEL_CS				/* pt_regs->cs */
-	pushq	%r10					/* pt_regs->ip */
-#else
+	pushq	%rcx					/* pt_regs->ip */
+	
+	jmp	2f
+
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+1:
+	swapgs
+
+	/* tss.sp2 is scratch space. */
+	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+
+	/* Construct struct pt_regs on stack */
 	pushq	$__USER_DS				/* pt_regs->ss */
 	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
 	pushq	%r11					/* pt_regs->flags */
 	pushq	$__USER_CS				/* pt_regs->cs */
 	pushq	%rcx					/* pt_regs->ip */
-#endif
+2:
 SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	pushq	%rax					/* pt_regs->orig_ax */
 
@@ -191,9 +214,23 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
-#ifdef CONFIG_UNIKERNEL_LINUX
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        je      1f
+
 	jmp	swapgs_restore_regs_and_return_to_usermode
-#endif
+	
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+1:
 	/*
 	 * Try to use SYSRET instead of IRET if we're returning to
 	 * a completely clean 64-bit userspace context.  If we're not,
@@ -533,24 +570,31 @@ SYM_CODE_START(interrupt_entry)
 	ASM_CLAC
 	cld
 
-#ifdef CONFIG_UNIKERNEL_LINUX
-	pushq	%rax
-	call	get_in_user
-	cmpq    $1, %rax
-	popq	%rax
-	jnz	1f
+        /* **************** */
+        /*  UKL CODE START  */
+        /* **************** */
+
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        je      1f
+	
 	movq    $0x33, CS-ORIG_RAX+8(%rsp)
-1:
-#endif
+
 	testb	$3, CS-ORIG_RAX+8(%rsp)
-	jz	1f
-#ifdef CONFIG_UNIKERNEL_LINUX
-	pushq	%rax
-	call 	exit_user
-	popq	%rax
-#else
+	jz	2f
+	call    exit_user
+	jmp	3f
+1:
+        /* **************** */
+        /*   UKL CODE END   */
+        /* **************** */
+
+	testb	$3, CS-ORIG_RAX+8(%rsp)
+	jz	2f
 	SWAPGS
-#endif
+3:
 	FENCE_SWAPGS_USER_ENTRY
 	/*
 	 * Switch to the thread stack. The IRET frame and orig_ax are
@@ -581,10 +625,10 @@ SYM_CODE_START(interrupt_entry)
 	pushq	8(%rdi)			/* return address */
 
 	movq	(%rdi), %rdi
-	jmp	2f
-1:
-	FENCE_SWAPGS_KERNEL_ENTRY
+	jmp	4f
 2:
+	FENCE_SWAPGS_KERNEL_ENTRY
+4:
 	PUSH_AND_CLEAR_REGS save_ret=1
 	ENCODE_FRAME_POINTER 8
 
@@ -649,9 +693,21 @@ ret_from_intr:
 
 	/* Interrupt came from user space */
 .Lretint_user:
-#ifdef CONFIG_UNIKERNEL_LINUX
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        je      1f
 	movq    $0x10, CS(%rsp)
-#endif
+1:
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+	
 	mov	%rsp,%rdi
 	call	prepare_exit_to_usermode
 	TRACE_IRQS_ON
@@ -694,13 +750,28 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 
 	/* Restore RDI. */
 	popq	%rdi
-#ifdef CONFIG_UNIKERNEL_LINUX
+	
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        je      1f
+	
 	pushq	%rax
 	call	enter_user
 	popq	%rax
-#else
+        jmp	2f
+1:
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+	
 	SWAPGS
-#endif
+2:
 	INTERRUPT_RETURN
 
 
@@ -1032,15 +1103,22 @@ SYM_CODE_START(\sym)
 	pushq	$-1				/* ORIG_RAX: no syscall to restart */
 	.endif
 
-#ifdef CONFIG_UNIKERNEL_LINUX
-	pushq	%rax
-	call	get_in_user
-	cmpq    $1, %rax
-	popq	%rax
-	jnz     1f
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        je      1f
+
 	movq    $0x33, CS-ORIG_RAX(%rsp)
-1:
-#endif
+1:	
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
 
 	.if \paranoid == 1
 	testb	$3, CS-ORIG_RAX(%rsp)		/* If coming from userspace, switch stacks */
@@ -1281,9 +1359,24 @@ SYM_CODE_START_LOCAL(paranoid_entry)
 	rdmsr
 	testl	%edx, %edx
 	js	1f				/* negative -> in kernel */
-#ifndef CONFIG_UNIKERNEL_LINUX
+
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        jne	2f
+
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+
 	SWAPGS
-#endif
+2:
 	xorl	%ebx, %ebx
 
 1:
@@ -1330,9 +1423,24 @@ SYM_CODE_START_LOCAL(paranoid_exit)
 	TRACE_IRQS_IRETQ
 	/* Always restore stashed CR3 value (see paranoid_entry) */
 	RESTORE_CR3	scratch_reg=%rbx save_reg=%r14
-#ifndef CONFIG_UNIKERNEL_LINUX
+
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        jne	2f
+
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+
 	SWAPGS_UNSAFE_STACK
-#endif
+2:
 	jmp	restore_regs_and_return_to_kernel
 .Lparanoid_exit_no_swapgs:
 	TRACE_IRQS_IRETQ_DEBUG
@@ -1356,13 +1464,29 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * We entered from user mode or we're pretending to have entered
 	 * from user mode due to an IRET fault.
 	 */
-#ifdef CONFIG_UNIKERNEL_LINUX
+
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        je	1f
+
 	pushq	%rax
 	call 	exit_user
 	popq	%rax
-#else
+	jmp	2f
+1:
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+
 	SWAPGS
-#endif
+2:
 	FENCE_SWAPGS_USER_ENTRY
 	/* We have user CR3.  Change to kernel CR3. */
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
@@ -1398,14 +1522,29 @@ SYM_CODE_START_LOCAL(error_entry)
 	cmpq	$.Lgs_change, RIP+8(%rsp)
 	jne	.Lerror_entry_done_lfence
 
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        jne	1f
+	
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+
 	/*
 	 * hack: .Lgs_change can fail with user gsbase.  If this happens, fix up
 	 * gsbase and proceed.  We'll fix up the exception and land in
 	 * .Lgs_change's error handler with kernel gsbase.
 	 */
-#ifndef CONFIG_UNIKERNEL_LINUX
+
 	SWAPGS
-#endif
+1:
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
 	jmp .Lerror_entry_done
@@ -1416,13 +1555,27 @@ SYM_CODE_START_LOCAL(error_entry)
 	/* fall through */
 
 .Lerror_bad_iret:
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        jne	1f
+	
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+
 	/*
 	 * We came from an IRET to user mode, so we have user
 	 * gsbase and CR3.  Switch to kernel gsbase and CR3:
 	 */
-#ifndef CONFIG_UNIKERNEL_LINUX
 	SWAPGS
-#endif
+1:
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
 
@@ -1513,9 +1666,23 @@ SYM_CODE_START(nmi)
 	 * stacks lest we corrupt the "NMI executing" variable.
 	 */
 
-#ifndef CONFIG_UNIKERNEL_LINUX
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        jne	1f
+	
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+
 	swapgs
-#endif
+1:
 	cld
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rdx
@@ -1761,9 +1928,23 @@ end_repeat_nmi:
 	testl	%ebx, %ebx			/* swapgs needed? */
 	jnz	nmi_restore
 nmi_swapgs:
-#ifndef CONFIG_UNIKERNEL_LINUX
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $0, %rax
+        popq    %rax
+        jne	1f
+	
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+
 	SWAPGS_UNSAFE_STACK
-#endif
+1:
 nmi_restore:
 	POP_REGS
 
