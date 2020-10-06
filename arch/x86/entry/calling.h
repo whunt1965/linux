@@ -103,34 +103,6 @@ For 32-bit we have the following conventions - kernel is built with
  * 2 = UKL thread - in kernel code
  */
 
-.macro CHECK_IF_NOT_UKL_JMP_label label=1f
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $0, %rax
-        popq    %rax
-        je      \label
-.endm
-
-.macro CHECK_IF_UKL_ALREADY_KERNEL_JMP_LABEL label=1f
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $2, %rax
-        popq    %rax
-        je      \label
-.endm
-
-.macro EXIT_USER
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-	call	exit_user
-        popq    %rax
-.endm
-
-.macro ENTER_USER
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-	call 	enter_user
-        popq    %rax
-.endm
-
 .macro PUSH_AND_CLEAR_REGS rdx=%rdx rax=%rax save_ret=0
 	.if \save_ret
 	pushq	%rsi		/* pt_regs->si */

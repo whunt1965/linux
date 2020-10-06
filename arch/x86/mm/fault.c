@@ -1403,8 +1403,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 2. The access did not originate in userspace.
 	 */
 	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
-#ifndef CONFIG_UNIKERNEL_LINUX
-		if (!user_mode(regs) && !search_exception_tables(regs->ip)) {
+		if (get_in_user() == 0 && !user_mode(regs) && !search_exception_tables(regs->ip)) {
 			/*
 			 * Fault from code in kernel from
 			 * which we do not expect faults.
@@ -1412,7 +1411,6 @@ void do_user_addr_fault(struct pt_regs *regs,
 			bad_area_nosemaphore(regs, hw_error_code, address);
 			return;
 		}
-#endif
 retry:
 		down_read(&mm->mmap_sem);
 	} else {
