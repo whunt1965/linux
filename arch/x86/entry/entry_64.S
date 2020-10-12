@@ -155,6 +155,8 @@ SYM_CODE_START(entry_SYSCALL_64)
 	/* **************** */
 
 	/* till the next label 1, we can write UKL specific code */
+	cmpq    $0x0, (%rsp)
+        jg      1f
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax
@@ -219,6 +221,9 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	/* **************** */
 
 	/* till the next label 1, we can write UKL specific code */
+	cmpq    $0x0, RIP(%rsp)
+        jg      1f
+
         pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax
@@ -574,6 +579,9 @@ SYM_CODE_START(interrupt_entry)
         /*  UKL CODE START  */
         /* **************** */
 
+	cmpq    $0x0, RIP-ORIG_RAX+8(%rsp)
+        jg      1f
+
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax
@@ -697,6 +705,8 @@ ret_from_intr:
 	/*  UKL CODE START  */
 	/* **************** */
 
+	cmpq    $0x0, RIP(%rsp)
+        jg      1f
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax
@@ -755,6 +765,8 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	/*  UKL CODE START  */
 	/* **************** */
 
+	cmpq    $0x0, RIP-ORIG_RAX-0x8(%rsp)
+        jg      1f
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax
@@ -1108,7 +1120,9 @@ SYM_CODE_START(\sym)
 	/* **************** */
 
 	/* till the next label 1, we can write UKL specific code */
-        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        cmpq	$0x0, RIP-ORIG_RAX(%rsp)
+	jg	1f
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax
         popq    %rax
@@ -1365,6 +1379,8 @@ SYM_CODE_START_LOCAL(paranoid_entry)
 	/* **************** */
 
 	/* till the next label 1, we can write UKL specific code */
+	cmpq    $0x0, RIP(%rsp)
+        jg      1f
         pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax
@@ -1429,12 +1445,14 @@ SYM_CODE_START_LOCAL(paranoid_exit)
 	/* **************** */
 
 	/* till the next label 1, we can write UKL specific code */
-        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        cmpq    $0x0, RIP(%rsp)
+        jg      1f
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax
         popq    %rax
         jne	2f
-
+1:
 	/* **************** */
 	/*   UKL CODE END   */
 	/* **************** */
@@ -1470,6 +1488,8 @@ SYM_CODE_START_LOCAL(error_entry)
 	/* **************** */
 
 	/* till the next label 1, we can write UKL specific code */
+	cmpq    $0x0, RIP+0x8(%rsp)
+        jg      1f
         pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $0, %rax

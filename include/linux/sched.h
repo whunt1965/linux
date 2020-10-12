@@ -629,6 +629,10 @@ struct wake_q_node {
 	struct wake_q_node *next;
 };
 
+inline int get_in_user (void);
+inline void enter_user (void);
+inline void exit_user (void);
+
 struct task_struct {
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	/*

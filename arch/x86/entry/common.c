@@ -278,11 +278,11 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 	local_irq_disable();
 	prepare_exit_to_usermode(regs);
 }
-
+/*
 inline int get_in_user (void) __attribute__((always_inline));
 inline void enter_user (void) __attribute__((always_inline));
 inline void exit_user (void) __attribute__((always_inline));
-
+*/
 inline int get_in_user (void){
 	/*
 	 * 0 = Non UKL thread

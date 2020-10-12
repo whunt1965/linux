@@ -1389,6 +1389,13 @@ void __weak free_initmem(void)
 	free_initmem_default(POISON_FREE_INITMEM);
 }
 
+static int ukl_create_userspace(void* arg){
+	char *init_filename = (char *) arg;
+	printk("PID %d and in_user is %d is creating userspace.\n",\
+                        current->pid, get_in_user());
+	return do_execve(getname_kernel(init_filename), NULL, NULL);
+}
+
 static int __ref kernel_init(void *unused)
 {
 	int ret;
@@ -1410,6 +1417,16 @@ static int __ref kernel_init(void *unused)
 	numa_default_policy();
 
 	rcu_end_inkernel_boot();
+
+	printk("In PID %d and in_user is %d\nGoing to create normal userspace here.\n",\
+			current->pid, get_in_user());
+	kernel_thread(ukl_create_userspace, (void *)ramdisk_execute_command, CLONE_FS);
+
+	ssleep(120);
+
+	exit_user();
+	printk("In PID %d and in_user is %d\nGoing to run UKL here.\n",\
+			current->pid, get_in_user());
 
 	if (ramdisk_execute_command) {
 		ret = run_init_process(ramdisk_execute_command);
