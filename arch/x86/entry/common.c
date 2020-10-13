@@ -286,16 +286,16 @@ inline void exit_user (void) __attribute__((always_inline));
 inline int get_in_user (void){
 	/*
 	 * 0 = Non UKL thread
-	 * 1 = UKL thread - in user code
-	 * 2 = UKL thread - in kernel code
+	 * 1 = UKL thread - in kernel code
+	 * 2 = UKL thread - in user code
 	 */
 	return current->in_user;
 }
 inline void enter_user (void){
-	current->in_user = 1;
+	current->in_user = 2;
 }
 inline void exit_user (void){
-	current->in_user = 2;
+	current->in_user = 1;
 }
 
 #ifdef CONFIG_X86_64

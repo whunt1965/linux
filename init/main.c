@@ -1319,13 +1319,13 @@ static int run_init_process(const char *init_filename)
 	const char *const *p;
 
 	argv_init[0] = init_filename;
-	pr_info("Run %s as init process\n", init_filename);
-	pr_debug("  with arguments:\n");
+	printk("run_init_process Run %s as init process\n", init_filename);
+	printk("  with arguments:\n");
 	for (p = argv_init; *p; p++)
-		pr_debug("    %s\n", *p);
-	pr_debug("  with environment:\n");
+		printk("    %s\n", *p);
+	printk("  with environment:\n");
 	for (p = envp_init; *p; p++)
-		pr_debug("    %s\n", *p);
+		printk("    %s\n", *p);
 	return do_execve(getname_kernel(init_filename),
 		(const char __user *const __user *)argv_init,
 		(const char __user *const __user *)envp_init);
@@ -1389,16 +1389,49 @@ void __weak free_initmem(void)
 	free_initmem_default(POISON_FREE_INITMEM);
 }
 
+struct ukl_init_args{
+	const char *init_filename;
+	const char * const *__argv;
+	const char * const *__envp;
+};
+
 static int ukl_create_userspace(void* arg){
-	char *init_filename = (char *) arg;
+	struct ukl_init_args * ukl_args = (struct ukl_init_args *) arg;
+	const char *init_filename = ukl_args->init_filename;
+	const char * const *ukl_argv_init = ukl_args->__argv;
+        const char * const *ukl_envp_init = ukl_args->__envp;
+        const char *const *p;
+
+	printk("ukl_create_userspace Run %s as init process\n", init_filename);
+	printk("  with arguments:\n");
+	for (p = ukl_argv_init; *p; p++)
+		printk("    %s\n", *p);
+	printk("  with environment:\n");
+	for (p = ukl_envp_init; *p; p++)
+		printk("    %s\n", *p);
 	printk("PID %d and in_user is %d is creating userspace.\n",\
                         current->pid, get_in_user());
-	return do_execve(getname_kernel(init_filename), NULL, NULL);
+	return do_execve(getname_kernel(init_filename),
+		(const char __user *const __user *)ukl_argv_init,
+		(const char __user *const __user *)ukl_envp_init);
 }
 
 static int __ref kernel_init(void *unused)
 {
 	int ret;
+	const char *ukl_argv_init[MAX_INIT_ARGS+2];
+	const char *ukl_envp_init[MAX_INIT_ENVS+2];
+	int i;
+	const char *const *p;
+	struct ukl_init_args ukl_args;
+
+	for(i = 0; i < MAX_INIT_ARGS+2; i++){
+		ukl_argv_init[i] = argv_init[i];
+	}
+	
+	for(i = 0; i < MAX_INIT_ARGS+2; i++){
+		ukl_envp_init[i] = envp_init[i];
+	}
 
 	kernel_init_freeable();
 	/* need to finish all async __init code before freeing the memory */
@@ -1417,13 +1450,26 @@ static int __ref kernel_init(void *unused)
 	numa_default_policy();
 
 	rcu_end_inkernel_boot();
-
+	/*
 	printk("In PID %d and in_user is %d\nGoing to create normal userspace here.\n",\
 			current->pid, get_in_user());
-	kernel_thread(ukl_create_userspace, (void *)ramdisk_execute_command, CLONE_FS);
 
-	ssleep(120);
+	ukl_argv_init[0] = ramdisk_execute_command;
+	printk("UKL Run %s as init process\n", ramdisk_execute_command);
+	printk("  with arguments:\n");
+	for (p = ukl_argv_init; *p; p++)
+		printk("    %s\n", *p);
+	printk("  with environment:\n");
+	for (p = ukl_envp_init; *p; p++)
+		printk("    %s\n", *p);
 
+ 	ukl_args.init_filename = ramdisk_execute_command;
+	ukl_args.__argv = ukl_argv_init;
+	ukl_args.__envp = ukl_envp_init;
+	kernel_thread(ukl_create_userspace, (void *)&ukl_args, CLONE_FS);
+
+	ssleep(10);
+	*/
 	exit_user();
 	printk("In PID %d and in_user is %d\nGoing to run UKL here.\n",\
 			current->pid, get_in_user());

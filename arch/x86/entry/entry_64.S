@@ -150,46 +150,7 @@ SYM_CODE_START(entry_SYSCALL_64)
 	 * it is too small to ever cause noticeable irq latency.
 	 */
 
-	/* **************** */
-	/*  UKL CODE START  */
-	/* **************** */
-
-	/* till the next label 1, we can write UKL specific code */
-	cmpq    $0x0, (%rsp)
-        jg      1f
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $0, %rax
-        popq    %rax
-        je      1f
-
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    exit_user
-        popq    %rax
-	
-	movq	%rcx,	%r10		/* put the 4th argument in r10 so syscall_define macro */
-					/* downstream can work without modifications */
-	popq	%rcx               	/* so that RIP is in rcx and iret frame can form properly */
-	/* tss.sp2 is scratch space. */
-	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
-	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
-
-	/* Construct struct pt_regs on stack */
-	pushq	$__KERNEL_DS				/* pt_regs->ss */
-	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
-	pushfq						/* pt_regs->flags */
-	pushq	$__KERNEL_CS				/* pt_regs->cs */
-	pushq	%rcx					/* pt_regs->ip */
-	
-	jmp	2f
-
-	/* **************** */
-	/*   UKL CODE END   */
-	/* **************** */
-1:
 	swapgs
-
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
@@ -201,7 +162,6 @@ SYM_CODE_START(entry_SYSCALL_64)
 	pushq	%r11					/* pt_regs->flags */
 	pushq	$__USER_CS				/* pt_regs->cs */
 	pushq	%rcx					/* pt_regs->ip */
-2:
 SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 	pushq	%rax					/* pt_regs->orig_ax */
 
@@ -216,26 +176,6 @@ SYM_INNER_LABEL(entry_SYSCALL_64_after_hwframe, SYM_L_GLOBAL)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
-	/* **************** */
-	/*  UKL CODE START  */
-	/* **************** */
-
-	/* till the next label 1, we can write UKL specific code */
-	cmpq    $0x0, RIP(%rsp)
-        jg      1f
-
-        pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $0, %rax
-        popq    %rax
-        je      1f
-
-	jmp	swapgs_restore_regs_and_return_to_usermode
-	
-	/* **************** */
-	/*   UKL CODE END   */
-	/* **************** */
-1:
 	/*
 	 * Try to use SYSRET instead of IRET if we're returning to
 	 * a completely clean 64-bit userspace context.  If we're not,
@@ -334,6 +274,116 @@ syscall_return_via_sysret:
 	popq	%rsp
 	USERGS_SYSRET64
 SYM_CODE_END(entry_SYSCALL_64)
+
+SYM_CODE_START(ukl_entry_SYSCALL_64)
+	UNWIND_HINT_EMPTY
+	/*
+	 * Interrupts are off on entry.
+	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
+	 * it is too small to ever cause noticeable irq latency.
+	 */
+
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	/* till the next label 1, we can write UKL specific code */
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    exit_user
+        popq    %rax
+	
+	pushq	%r10
+	movq	%rcx,	%r10		/* put the 4th argument in r10 so syscall_define macro */
+					/* downstream can work without modifications */
+	movq	0x8(%rsp), %rcx               	/* so that RIP is in rcx and iret frame can form properly */
+	/* tss.sp2 is scratch space. */
+	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+
+	/* Construct struct pt_regs on stack */
+	pushq	$__KERNEL_DS				/* pt_regs->ss */
+	pushq	PER_CPU_VAR(cpu_tss_rw + TSS_sp2)	/* pt_regs->sp */
+	pushfq						/* pt_regs->flags */
+	pushq	$__KERNEL_CS				/* pt_regs->cs */
+	pushq	%rcx					/* pt_regs->ip */
+	
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+	pushq	%rax					/* pt_regs->orig_ax */
+
+	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
+
+	TRACE_IRQS_OFF
+
+	/* IRQs are off. */
+	movq	%rax, %rdi
+	movq	%rsp, %rsi
+	call	do_syscall_64		/* returns with IRQs disabled */
+
+	TRACE_IRQS_ON			/* return enables interrupts */
+
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	POP_REGS pop_rdi=0
+
+	/*
+	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
+	 * Save old stack pointer and switch to trampoline stack.
+	 */
+	movq	%rsp, %rdi
+	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
+	UNWIND_HINT_EMPTY
+
+	/* Copy the IRET frame to the trampoline stack. */
+	pushq	6*8(%rdi)	/* SS */
+	pushq	5*8(%rdi)	/* RSP */
+	pushq	4*8(%rdi)	/* EFLAGS */
+	pushq	3*8(%rdi)	/* CS */
+	pushq	2*8(%rdi)	/* RIP */
+
+	/* Push user RDI on the trampoline stack. */
+	pushq	(%rdi)
+
+	/*
+	 * We are on the trampoline stack.  All regs except RDI are live.
+	 * We can do future final exit work right here.
+	 */
+	STACKLEAK_ERASE_NOCLOBBER
+
+	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
+
+	/* Restore RDI. */
+	popq	%rdi
+	
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	pushq	%rax
+	call	enter_user
+	popq	%rax
+
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+	
+	movq	%r10,	%rcx
+	pushq	%rdi
+	movq	0x20(%rsp), %rdi
+	movq	(%rdi),	%r10
+	addq	$0x10,	%rdi
+	movq	%rdi, 0x20(%rsp)
+	popq	%rdi
+	INTERRUPT_RETURN
+	
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+SYM_CODE_END(ukl_entry_SYSCALL_64)
 
 /*
  * %rdi: prev task
@@ -584,9 +634,9 @@ SYM_CODE_START(interrupt_entry)
 
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $0, %rax
+        cmpq    $2, %rax
         popq    %rax
-        je      1f
+        jb      1f
 	
 	movq    $0x33, CS-ORIG_RAX+8(%rsp)
 
@@ -707,11 +757,6 @@ ret_from_intr:
 
 	cmpq    $0x0, RIP(%rsp)
         jg      1f
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $0, %rax
-        popq    %rax
-        je      1f
 	movq    $0x10, CS(%rsp)
 1:
 	/* **************** */
@@ -767,11 +812,6 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 
 	cmpq    $0x0, RIP-ORIG_RAX-0x8(%rsp)
         jg      1f
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $0, %rax
-        popq    %rax
-        je      1f
 	
 	pushq	%rax
 	call	enter_user
@@ -1124,9 +1164,9 @@ SYM_CODE_START(\sym)
 	jg	1f
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $0, %rax
+        cmpq    $2, %rax
         popq    %rax
-        je      1f
+        jb      1f
 
 	movq    $0x33, CS-ORIG_RAX(%rsp)
 1:	
@@ -1492,9 +1532,9 @@ SYM_CODE_START_LOCAL(error_entry)
         jg      1f
         pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $0, %rax
+        cmpq    $2, %rax
         popq    %rax
-        je	1f
+        jb	2f
 
 	pushq	%rax
 	call 	exit_user
