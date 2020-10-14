@@ -291,11 +291,9 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    exit_user
         popq    %rax
+        
+	popq    %rcx
 	
-	pushq	%r10
-	movq	%rcx,	%r10		/* put the 4th argument in r10 so syscall_define macro */
-					/* downstream can work without modifications */
-	movq	0x8(%rsp), %rcx               	/* so that RIP is in rcx and iret frame can form properly */
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
@@ -328,58 +326,8 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/*  UKL CODE START  */
 	/* **************** */
 
-	POP_REGS pop_rdi=0
+	jmp     swapgs_restore_regs_and_return_to_usermode
 
-	/*
-	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
-	 * Save old stack pointer and switch to trampoline stack.
-	 */
-	movq	%rsp, %rdi
-	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
-	UNWIND_HINT_EMPTY
-
-	/* Copy the IRET frame to the trampoline stack. */
-	pushq	6*8(%rdi)	/* SS */
-	pushq	5*8(%rdi)	/* RSP */
-	pushq	4*8(%rdi)	/* EFLAGS */
-	pushq	3*8(%rdi)	/* CS */
-	pushq	2*8(%rdi)	/* RIP */
-
-	/* Push user RDI on the trampoline stack. */
-	pushq	(%rdi)
-
-	/*
-	 * We are on the trampoline stack.  All regs except RDI are live.
-	 * We can do future final exit work right here.
-	 */
-	STACKLEAK_ERASE_NOCLOBBER
-
-	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
-
-	/* Restore RDI. */
-	popq	%rdi
-	
-	/* **************** */
-	/*  UKL CODE START  */
-	/* **************** */
-
-	pushq	%rax
-	call	enter_user
-	popq	%rax
-
-	/* **************** */
-	/*   UKL CODE END   */
-	/* **************** */
-	
-	movq	%r10,	%rcx
-	pushq	%rdi
-	movq	0x20(%rsp), %rdi
-	movq	(%rdi),	%r10
-	addq	$0x10,	%rdi
-	movq	%rdi, 0x20(%rsp)
-	popq	%rdi
-	INTERRUPT_RETURN
-	
 	/* **************** */
 	/*   UKL CODE END   */
 	/* **************** */
