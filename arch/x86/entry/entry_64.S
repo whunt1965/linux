@@ -587,9 +587,6 @@ SYM_CODE_START(interrupt_entry)
         jb      1f
 	
 	movq    $0x33, CS-ORIG_RAX+8(%rsp)
-
-	testb	$3, CS-ORIG_RAX+8(%rsp)
-	jz	2f
 	call    exit_user
 	jmp	3f
 1:
