@@ -1450,7 +1450,7 @@ static int __ref kernel_init(void *unused)
 	numa_default_policy();
 
 	rcu_end_inkernel_boot();
-	/*
+	
 	printk("In PID %d and in_user is %d\nGoing to create normal userspace here.\n",\
 			current->pid, get_in_user());
 
@@ -1467,9 +1467,9 @@ static int __ref kernel_init(void *unused)
 	ukl_args.__argv = ukl_argv_init;
 	ukl_args.__envp = ukl_envp_init;
 	kernel_thread(ukl_create_userspace, (void *)&ukl_args, CLONE_FS);
-
+	
 	ssleep(10);
-	*/
+	
 	exit_user();
 	printk("In PID %d and in_user is %d\nGoing to run UKL here.\n",\
 			current->pid, get_in_user());
@@ -1481,7 +1481,7 @@ static int __ref kernel_init(void *unused)
 		pr_err("Failed to execute %s (error %d)\n",
 		       ramdisk_execute_command, ret);
 	}
-
+	
 	/*
 	 * We try each of these until one succeeds.
 	 *
