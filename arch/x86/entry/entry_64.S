@@ -1318,6 +1318,8 @@ SYM_CODE_START_LOCAL(paranoid_entry)
 	rdmsr
 	testl	%edx, %edx
 	js	1f				/* negative -> in kernel */
+1:
+        jmp 1b
 	SWAPGS
 	xorl	%ebx, %ebx
 
@@ -1365,6 +1367,8 @@ SYM_CODE_START_LOCAL(paranoid_exit)
 	TRACE_IRQS_IRETQ
 	/* Always restore stashed CR3 value (see paranoid_entry) */
 	RESTORE_CR3	scratch_reg=%rbx save_reg=%r14
+1:
+        jmp 1b
 	SWAPGS_UNSAFE_STACK
 	jmp	restore_regs_and_return_to_kernel
 .Lparanoid_exit_no_swapgs:
@@ -1383,14 +1387,35 @@ SYM_CODE_START_LOCAL(error_entry)
 	PUSH_AND_CLEAR_REGS save_ret=1
 	ENCODE_FRAME_POINTER 8
 	testb	$3, CS+8(%rsp)
-	jz	.Lerror_kernelspace
+
+        /* **************** */
+        /*  UKL CODE START  */
+        /* **************** */
+
+        jnz	1f /* user threads */
+
+        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+        cmpq    $2, %rax
+        popq    %rax
+	jb	.Lerror_kernelspace
+
+        movq    $0xC3, CS+8(%rsp)
+        call    exit_user
+	jmp	2f
+
+        /* **************** */
+        /*   UKL CODE END   */
+        /* **************** */
 
 	/*
 	 * We entered from user mode or we're pretending to have entered
 	 * from user mode due to an IRET fault.
 	 */
+1:
 	SWAPGS
 	FENCE_SWAPGS_USER_ENTRY
+2:
 	/* We have user CR3.  Change to kernel CR3. */
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
 
@@ -1430,6 +1455,8 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * gsbase and proceed.  We'll fix up the exception and land in
 	 * .Lgs_change's error handler with kernel gsbase.
 	 */
+1:
+	jmp 1b
 	SWAPGS
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
@@ -1445,6 +1472,8 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * We came from an IRET to user mode, so we have user
 	 * gsbase and CR3.  Switch to kernel gsbase and CR3:
 	 */
+1:
+        jmp 1b
 	SWAPGS
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
@@ -1535,7 +1564,8 @@ SYM_CODE_START(nmi)
 	 * We also must not push anything to the stack before switching
 	 * stacks lest we corrupt the "NMI executing" variable.
 	 */
-
+1:
+        jmp 1b
 	swapgs
 	cld
 	FENCE_SWAPGS_USER_ENTRY
@@ -1782,6 +1812,8 @@ end_repeat_nmi:
 	testl	%ebx, %ebx			/* swapgs needed? */
 	jnz	nmi_restore
 nmi_swapgs:
+1:
+        jmp 1b
 	SWAPGS_UNSAFE_STACK
 nmi_restore:
 	POP_REGS
