@@ -283,8 +283,6 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	 * it is too small to ever cause noticeable irq latency.
 	 */
 	
-	popq	%rcx
-
 	pushq	%rax
 	call	exit_user
 	popq	%rax
@@ -304,6 +302,12 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	pushq	%rax					/* pt_regs->orig_ax */
 
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
+
+	movq	RSP(%rsp), %rdi
+	movq	(%rdi), %rsi
+	movq	%rsi, RIP(%rsp)
+	addq	$8, %rdi
+	movq	%rdi, RSP(%rsp)
 
 	TRACE_IRQS_OFF
 
@@ -1082,7 +1086,24 @@ SYM_CODE_START(\sym)
 	.if \paranoid == 1
 	testb	$3, CS-ORIG_RAX(%rsp)		/* If coming from userspace, switch stacks */
 	jnz	.Lfrom_usermode_switch_stack_\@
+
+	/* **************** */
+        /*  UKL CODE START  */
+        /* **************** */
+	
+        pushq   %rax                    / * save RAX so its not overwritten when function returns * /
+        call    get_in_user             / * Get in_user value to see if we are a UKL thread or not * /
+        cmpq    $2, %rax
+        popq    %rax
+        jb      1f
+	movq	$0xC3, CS-ORIG_RAX(%rsp)
+1:
+        /* **************** */
+        /*   UKL CODE END   */
+        /* **************** */
+
 	.endif
+/*.Lfrom_ukl_kernelmode_\@:*/
 
 	.if \create_gap == 1
 	/*
@@ -1318,8 +1339,6 @@ SYM_CODE_START_LOCAL(paranoid_entry)
 	rdmsr
 	testl	%edx, %edx
 	js	1f				/* negative -> in kernel */
-1:
-        jmp 1b
 	SWAPGS
 	xorl	%ebx, %ebx
 
@@ -1367,8 +1386,6 @@ SYM_CODE_START_LOCAL(paranoid_exit)
 	TRACE_IRQS_IRETQ
 	/* Always restore stashed CR3 value (see paranoid_entry) */
 	RESTORE_CR3	scratch_reg=%rbx save_reg=%r14
-1:
-        jmp 1b
 	SWAPGS_UNSAFE_STACK
 	jmp	restore_regs_and_return_to_kernel
 .Lparanoid_exit_no_swapgs:
