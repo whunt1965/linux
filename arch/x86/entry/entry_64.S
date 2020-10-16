@@ -586,7 +586,10 @@ SYM_CODE_START(interrupt_entry)
         jb      3f
 
         movq    $0xC3, CS-ORIG_RAX+8(%rsp)
+	
+	pushq   %rax
         call    exit_user
+	popq   %rax
 
 	/* **************** */
         /*   UKL CODE END   */
@@ -1418,7 +1421,9 @@ SYM_CODE_START_LOCAL(error_entry)
 	jb	.Lerror_kernelspace
 
         movq    $0xC3, CS+8(%rsp)
+	pushq   %rax
         call    exit_user
+	popq   %rax
 	jmp	2f
 
         /* **************** */
