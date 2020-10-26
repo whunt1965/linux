@@ -1311,6 +1311,11 @@ void do_user_addr_fault(struct pt_regs *regs,
 	struct mm_struct *mm;
 	vm_fault_t fault, major = 0;
 	unsigned int flags = FAULT_FLAG_DEFAULT;
+#ifdef CONFIG_UKL_SAME_STACK
+	struct vm_area_struct *usv;
+	long unsigned int myrsp;
+#endif
+	int get_rwsem_lock = 1;
 
 	tsk = current;
 	mm = tsk->mm;
@@ -1390,6 +1395,17 @@ void do_user_addr_fault(struct pt_regs *regs,
 	}
 #endif
 
+#ifdef CONFIG_UKL_SAME_STACK
+	/* Checking if addr is a stack addr */
+	usv = tsk->user_stack_vma;
+	if (usv){
+		if (usv->vm_start <= address && usv->vm_end > address){
+			vma = usv;
+			get_rwsem_lock = 0;
+		}
+	}
+#endif
+
 	/*
 	 * Kernel-mode access to the user address space should only occur
 	 * on well-defined single instructions listed in the exception
@@ -1402,27 +1418,29 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 1. Failed to acquire mmap_sem, and
 	 * 2. The access did not originate in userspace.
 	 */
-	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
-		if (get_in_user() == 0 && !user_mode(regs) && !search_exception_tables(regs->ip)) {
-			/*
-			 * Fault from code in kernel from
-			 * which we do not expect faults.
-			 */
-			bad_area_nosemaphore(regs, hw_error_code, address);
-			return;
-		}
+	if (get_rwsem_lock){
+		if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
+			if (get_in_user() == 0 && !user_mode(regs) && !search_exception_tables(regs->ip)) {
+				/*
+				 * Fault from code in kernel from
+				 * which we do not expect faults.
+				 */
+				bad_area_nosemaphore(regs, hw_error_code, address);
+				return;
+			}
 retry:
-		down_read(&mm->mmap_sem);
-	} else {
-		/*
-		 * The above down_read_trylock() might have succeeded in
-		 * which case we'll have missed the might_sleep() from
-		 * down_read():
-		 */
-		might_sleep();
+			down_read(&mm->mmap_sem);
+		} else {
+			/*
+			 * The above down_read_trylock() might have succeeded in
+			 * which case we'll have missed the might_sleep() from
+			 * down_read():
+			 */
+			might_sleep();
+		}
+	
+		vma = find_vma(mm, address);
 	}
-
-	vma = find_vma(mm, address);
 	if (unlikely(!vma)) {
 		bad_area(regs, hw_error_code, address);
 		return;
@@ -1483,7 +1501,9 @@ good_area:
 		goto retry;
 	}
 
-	up_read(&mm->mmap_sem);
+	if (get_rwsem_lock){
+		up_read(&mm->mmap_sem);
+	}
 	if (unlikely(fault & VM_FAULT_ERROR)) {
 		mm_fault_error(regs, hw_error_code, address, fault);
 		return;

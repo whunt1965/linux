@@ -290,7 +290,9 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
+#ifndef CONFIG_UKL_SAME_STACK
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+#endif
 
 	/* Construct struct pt_regs on stack */
 	pushq   $__KERNEL_DS                            /* pt_regs->ss */
@@ -388,6 +390,10 @@ SYM_CODE_START(ret_from_fork)
 	UNWIND_HINT_REGS
 	movq	%rsp, %rdi
 	call	syscall_return_slowpath	/* returns with IRQs disabled */
+#ifdef CONFIG_UKL_SAME_STACK
+	movq	RSP(%rsp), %rdi
+	call    find_user_vma
+#endif
 	TRACE_IRQS_ON			/* user mode is traced as IRQS on */
 	jmp	swapgs_restore_regs_and_return_to_usermode
 
@@ -716,6 +722,7 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
 	 * Save old stack pointer and switch to trampoline stack.
 	 */
+#ifndef CONFIG_UKL_SAME_STACK
 	movq	%rsp, %rdi
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
 	UNWIND_HINT_EMPTY
@@ -737,9 +744,14 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	STACKLEAK_ERASE_NOCLOBBER
 
 	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
+#endif
 
 	/* Restore RDI. */
 	popq	%rdi
+
+#ifdef CONFIG_UKL_SAME_STACK
+	addq    $8, %rsp /* need to get rid of orig_ax */
+#endif
 
 	/* **************** */
         /*  UKL CODE START  */

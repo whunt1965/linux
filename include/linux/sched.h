@@ -651,6 +651,7 @@ struct task_struct {
 	randomized_struct_fields_start
 
 	void				*stack;
+	struct vm_area_struct           *user_stack_vma;
 	int				in_user;
 	refcount_t			usage;
 	/* Per task flags (PF_*), defined further below: */
