@@ -722,7 +722,18 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
 	 * Save old stack pointer and switch to trampoline stack.
 	 */
-#ifndef CONFIG_UKL_SAME_STACK
+	
+	/* **************** */
+        /*  UKL CODE START  */
+        /* **************** */
+	
+	cmpq    $0x33, CS-ORIG_RAX+8(%rsp)
+        jne	1f
+
+        /* **************** */
+        /*   UKL CODE END   */
+        /* **************** */
+
 	movq	%rsp, %rdi
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
 	UNWIND_HINT_EMPTY
@@ -744,28 +755,29 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	STACKLEAK_ERASE_NOCLOBBER
 
 	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi
-#endif
 
 	/* Restore RDI. */
 	popq	%rdi
+	jmp	2f
 
-#ifdef CONFIG_UKL_SAME_STACK
+1:	
+	popq	%rdi
 	addq    $8, %rsp /* need to get rid of orig_ax */
-#endif
 
+2:
 	/* **************** */
         /*  UKL CODE START  */
         /* **************** */
 
 	cmpq    $0x33, 8(%rsp)
-        je	1f
+        je	3f
 
 	pushq   %rax
         call    enter_user
         popq    %rax
 
 	INTERRUPT_RETURN
-1:
+3:
         /* **************** */
         /*   UKL CODE END   */
         /* **************** */
