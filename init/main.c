@@ -1471,6 +1471,7 @@ static int __ref kernel_init(void *unused)
 	ssleep(10);
 	
 	exit_user();
+	
 	printk("In PID %d and in_user is %d\nGoing to run UKL here.\n",\
 			current->pid, get_in_user());
 

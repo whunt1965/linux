@@ -289,10 +289,8 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
-	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-#ifndef CONFIG_UKL_SAME_STACK
+	/* SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp */
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
-#endif
 
 	/* Construct struct pt_regs on stack */
 	pushq   $__KERNEL_DS                            /* pt_regs->ss */
@@ -320,7 +318,16 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
-	jmp	swapgs_restore_regs_and_return_to_usermode
+	POP_REGS pop_rdi=0
+
+	popq	%rdi
+	addq    $8, %rsp /* need to get rid of orig_ax */
+
+	pushq   %rax
+        call    enter_user
+        popq    %rax
+
+	INTERRUPT_RETURN
 SYM_CODE_END(ukl_entry_SYSCALL_64)
 
 
@@ -390,10 +397,8 @@ SYM_CODE_START(ret_from_fork)
 	UNWIND_HINT_REGS
 	movq	%rsp, %rdi
 	call	syscall_return_slowpath	/* returns with IRQs disabled */
-#ifdef CONFIG_UKL_SAME_STACK
-	movq	RSP(%rsp), %rdi
+	movq    RSP(%rsp), %rdi
 	call    find_user_vma
-#endif
 	TRACE_IRQS_ON			/* user mode is traced as IRQS on */
 	jmp	swapgs_restore_regs_and_return_to_usermode
 
@@ -722,18 +727,6 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.
 	 * Save old stack pointer and switch to trampoline stack.
 	 */
-	
-	/* **************** */
-        /*  UKL CODE START  */
-        /* **************** */
-	
-	cmpq    $0x33, CS-ORIG_RAX+8(%rsp)
-        jne	1f
-
-        /* **************** */
-        /*   UKL CODE END   */
-        /* **************** */
-
 	movq	%rsp, %rdi
 	movq	PER_CPU_VAR(cpu_tss_rw + TSS_sp0), %rsp
 	UNWIND_HINT_EMPTY
@@ -758,26 +751,20 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 
 	/* Restore RDI. */
 	popq	%rdi
-	jmp	2f
 
-1:	
-	popq	%rdi
-	addq    $8, %rsp /* need to get rid of orig_ax */
-
-2:
 	/* **************** */
         /*  UKL CODE START  */
         /* **************** */
 
 	cmpq    $0x33, 8(%rsp)
-        je	3f
+        je	1f
 
 	pushq   %rax
         call    enter_user
         popq    %rax
 
 	INTERRUPT_RETURN
-3:
+1:
         /* **************** */
         /*   UKL CODE END   */
         /* **************** */

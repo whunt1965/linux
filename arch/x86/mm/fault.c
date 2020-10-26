@@ -1313,7 +1313,6 @@ void do_user_addr_fault(struct pt_regs *regs,
 	unsigned int flags = FAULT_FLAG_DEFAULT;
 #ifdef CONFIG_UKL_SAME_STACK
 	struct vm_area_struct *usv;
-	long unsigned int myrsp;
 #endif
 	int get_rwsem_lock = 1;
 
@@ -1395,16 +1394,16 @@ void do_user_addr_fault(struct pt_regs *regs,
 	}
 #endif
 
-#ifdef CONFIG_UKL_SAME_STACK
-	/* Checking if addr is a stack addr */
-	usv = tsk->user_stack_vma;
-	if (usv){
-		if (usv->vm_start <= address && usv->vm_end > address){
-			vma = usv;
-			get_rwsem_lock = 0;
+	if(get_in_user() > 0){
+		/* Checking if addr is a stack addr */
+		usv = tsk->user_stack_vma;
+		if (usv){
+			if (usv->vm_start <= address && usv->vm_end > address){
+				vma = usv;
+				get_rwsem_lock = 0;
+			}
 		}
 	}
-#endif
 
 	/*
 	 * Kernel-mode access to the user address space should only occur

@@ -359,11 +359,12 @@ static int bprm_mm_init(struct linux_binprm *bprm)
 	int err;
 	struct mm_struct *mm = NULL;
 
-#ifdef CONFIG_UNIKERNEL_LINUX
-	bprm->mm = mm = &init_mm;
-#else
-	bprm->mm = mm = mm_alloc();
-#endif
+	if(get_in_user() > 0){
+		bprm->mm = mm = &init_mm;
+	} else {
+		bprm->mm = mm = mm_alloc();
+	}
+
 	err = -ENOMEM;
 	if (!mm)
 		goto err;
