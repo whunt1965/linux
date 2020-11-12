@@ -290,7 +290,7 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-	/*movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp*/
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 
 	/* Construct struct pt_regs on stack */
 	pushq   $__KERNEL_DS                            /* pt_regs->ss */
@@ -309,8 +309,6 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	addq	$8, %rdi
 	movq	%rdi, RSP(%rsp)
 
-	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
-
 	TRACE_IRQS_OFF
 
 	/* IRQs are off. */
@@ -320,23 +318,7 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
-	POP_REGS pop_rdi=0
-
-	popq	%rdi
-	addq    $8, %rsp /* need to get rid of orig_ax */
-	 
-	pushq   %rax
-	call    enter_user
-	popq    %rax
- 
-	cmpq    $0x33, 8(%rsp)
-        je     1f
-	cmpq    $0x10, 8(%rsp)
-        je     1f
-2:
-	jmp	2b
-1:
-	INTERRUPT_RETURN
+	jmp	swapgs_restore_regs_and_return_to_usermode
 SYM_CODE_END(ukl_entry_SYSCALL_64)
 
 
@@ -730,14 +712,6 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	ud2
 1:
 #endif
-	
-	cmpq    $0x33, 17*8(%rsp)
-        je     5f
-	cmpq    $0x10, 17*8(%rsp)
-        je     5f
-4:
-	jmp	4b
-5:
 	POP_REGS pop_rdi=0
 
 	/*
@@ -780,13 +754,6 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
         call    enter_user
         popq    %rax
 
-	cmpq    $0x33, 8(%rsp)
-        je     3f
-	cmpq    $0x10, 8(%rsp)
-        je     3f
-2:
-	jmp	2b
-3:
 	INTERRUPT_RETURN
 1:
         /* **************** */
@@ -794,13 +761,6 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
         /* **************** */
 
 	SWAPGS
-	cmpq    $0x33, 8(%rsp)
-        je     1f
-	cmpq    $0x10, 8(%rsp)
-        je     1f
-2:
-	jmp	2b
-1:
 	INTERRUPT_RETURN
 
 
@@ -835,13 +795,6 @@ SYM_INNER_LABEL(restore_regs_and_return_to_kernel, SYM_L_GLOBAL)
 	 * ARCH_HAS_MEMBARRIER_SYNC_CORE rely on IRET core serialization
 	 * when returning from IPI handler.
 	 */
-	cmpq    $0x33, 8(%rsp)
-        je     1f
-	cmpq    $0x10, 8(%rsp)
-        je     1f
-2:
-	jmp	2b
-1:
 	INTERRUPT_RETURN
 
 SYM_INNER_LABEL_ALIGN(native_iret, SYM_L_GLOBAL)

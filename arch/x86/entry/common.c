@@ -170,11 +170,11 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 
 		/* deal with pending signal delivery */
 		if (cached_flags & _TIF_SIGPENDING){
-			if (get_in_user() > 0){
+			/*if (get_in_user() > 0){
 				ukl_handle_signals();
-			} else {
+			} else {*/
 				do_signal(regs);
-			}
+			//}
 		}
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
