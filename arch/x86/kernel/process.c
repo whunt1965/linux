@@ -170,11 +170,11 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
 
 	frame->bx = 0;
 #ifdef CONFIG_UKL_SAME_STACK
-	if (clone_flags & CLONE_UKL){
+	/*if (clone_flags & CLONE_UKL){
 		*childregs = * (struct pt_regs *) tss->x86_tss.sp2;
-	} else {
+	} else {*/
 		*childregs = *current_pt_regs();
-	}
+	//}
 #else
 	*childregs = *current_pt_regs();
 #endif
