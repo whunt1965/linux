@@ -1402,6 +1402,8 @@ static int ukl_create_userspace(void* arg){
         const char * const *ukl_envp_init = ukl_args->__envp;
         const char *const *p;
 
+	//exit_user();
+	/*
 	printk("ukl_create_userspace Run %s as init process\n", init_filename);
 	printk("  with arguments:\n");
 	for (p = ukl_argv_init; *p; p++)
@@ -1409,6 +1411,7 @@ static int ukl_create_userspace(void* arg){
 	printk("  with environment:\n");
 	for (p = ukl_envp_init; *p; p++)
 		printk("    %s\n", *p);
+	*/
 	printk("PID %d and in_user is %d is creating userspace.\n",\
                         current->pid, get_in_user());
 	return do_execve(getname_kernel(init_filename),
@@ -1450,11 +1453,9 @@ static int __ref kernel_init(void *unused)
 	numa_default_policy();
 
 	rcu_end_inkernel_boot();
-	
+	/*
 	printk("In PID %d and in_user is %d\nGoing to create normal userspace here.\n",\
 			current->pid, get_in_user());
-
-	ukl_argv_init[0] = ramdisk_execute_command;
 	printk("UKL Run %s as init process\n", ramdisk_execute_command);
 	printk("  with arguments:\n");
 	for (p = ukl_argv_init; *p; p++)
@@ -1462,17 +1463,18 @@ static int __ref kernel_init(void *unused)
 	printk("  with environment:\n");
 	for (p = ukl_envp_init; *p; p++)
 		printk("    %s\n", *p);
-
+	
+	ukl_argv_init[0] = ramdisk_execute_command;
  	ukl_args.init_filename = ramdisk_execute_command;
 	ukl_args.__argv = ukl_argv_init;
 	ukl_args.__envp = ukl_envp_init;
 	kernel_thread(ukl_create_userspace, (void *)&ukl_args, CLONE_FS);
 	
-	ssleep(10);
+	//ssleep(10);
 	
-	exit_user();
-	
-	printk("In PID %d and in_user is %d\nGoing to run UKL here.\n",\
+	//exit_user();
+	*/
+	printk("In PID %d and in_user is %d\nGoing to create UKL here.\n",\
 			current->pid, get_in_user());
 
 	if (ramdisk_execute_command) {

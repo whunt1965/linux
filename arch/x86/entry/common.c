@@ -342,6 +342,20 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 }
 #endif
 
+
+void set_ukl_bypass_syscall(int val){
+	current->ukl_bypass_syscall = val;
+	if(val == 1){
+		exit_user();
+	} else {
+		enter_user();
+	}
+}
+
+int get_ukl_bypass_syscall(void){
+	return current->ukl_bypass_syscall;
+}
+
 #ifdef CONFIG_UKL_SAME_STACK
 void find_user_vma(unsigned long addr){
 	struct vm_area_struct *usv;
@@ -350,6 +364,8 @@ void find_user_vma(unsigned long addr){
 	
 	tsk = current;
 	mm = tsk->mm;
+
+ 	set_ukl_bypass_syscall(0);
 
 	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
 		down_read(&mm->mmap_sem);

@@ -653,6 +653,7 @@ struct task_struct {
 	void				*stack;
 	struct vm_area_struct           *user_stack_vma;
 	int				in_user;
+ 	int				ukl_bypass_syscall;
 	refcount_t			usage;
 	/* Per task flags (PF_*), defined further below: */
 	unsigned int			flags;
