@@ -134,6 +134,18 @@ static long syscall_trace_enter(struct pt_regs *regs)
 	(_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_UPROBE |	\
 	 _TIF_NEED_RESCHED | _TIF_USER_RETURN_NOTIFY | _TIF_PATCH_PENDING)
 
+#ifdef CONFIG_UKL_SAME_STACK
+void ukl_handle_signals(void){
+	struct ksignal ksig;
+	void (*ukl_handler)(int,...);
+	
+	while (get_signal(&ksig)) {
+		ukl_handler = (void*) ksig.ka.sa.sa_handler;
+		ukl_handler(ksig.sig, &ksig.info, &ksig.ka.sa.sa_restorer);
+	}
+}
+#endif
+
 static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 {
 	/*
@@ -157,8 +169,18 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 			klp_update_patch_state(current);
 
 		/* deal with pending signal delivery */
+#ifdef CONFIG_UKL_SAME_STACK
+		if (cached_flags & _TIF_SIGPENDING){
+			if (get_in_user() > 0){
+				ukl_handle_signals();
+			} else {
+				do_signal(regs);
+			}
+		}
+#else
 		if (cached_flags & _TIF_SIGPENDING)
 			do_signal(regs);
+#endif
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
 			clear_thread_flag(TIF_NOTIFY_RESUME);
@@ -322,6 +344,30 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 	}
 
 	syscall_return_slowpath(regs);
+}
+#endif
+
+#ifdef CONFIG_UKL_SAME_STACK
+void find_user_vma(unsigned long addr){
+	struct vm_area_struct *usv;
+	struct task_struct *tsk;
+	struct mm_struct *mm;
+	
+	tsk = current;
+	mm = tsk->mm;
+
+	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
+		down_read(&mm->mmap_sem);
+	}
+
+	usv = find_vma(mm, addr);
+
+	up_read(&mm->mmap_sem);
+
+	if(usv == NULL){
+		printk("Error: Could not find user stack vma!");
+	}
+	tsk->user_stack_vma = usv;
 }
 #endif
 
