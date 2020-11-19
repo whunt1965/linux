@@ -364,9 +364,11 @@ void find_user_vma(unsigned long addr){
 	
 	tsk = current;
 	mm = tsk->mm;
-
- 	set_ukl_bypass_syscall(0);
-
+	/*
+	if(get_in_user() > 0){
+		set_ukl_bypass_syscall(0);
+	}
+	*/
 	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
 		down_read(&mm->mmap_sem);
 	}
