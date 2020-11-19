@@ -1313,8 +1313,8 @@ void do_user_addr_fault(struct pt_regs *regs,
 	unsigned int flags = FAULT_FLAG_DEFAULT;
 #ifdef CONFIG_UKL_SAME_STACK
 	struct vm_area_struct *usv;
-#endif
 	int get_rwsem_lock = 1;
+#endif
 
 	tsk = current;
 	mm = tsk->mm;
@@ -1394,6 +1394,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	}
 #endif
 
+#ifdef CONFIG_UKL_SAME_STACK
 	if(get_in_user() > 0){
 		/* Checking if addr is a stack addr */
 		usv = tsk->user_stack_vma;
@@ -1404,6 +1405,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 			}
 		}
 	}
+#endif
 
 	/*
 	 * Kernel-mode access to the user address space should only occur
@@ -1417,6 +1419,8 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 1. Failed to acquire mmap_sem, and
 	 * 2. The access did not originate in userspace.
 	 */
+
+#ifdef CONFIG_UKL_SAME_STACK
 	if (get_rwsem_lock){
 		if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
 			if (get_in_user() == 0 && !user_mode(regs) && !search_exception_tables(regs->ip)) {
@@ -1440,6 +1444,29 @@ retry:
 	
 		vma = find_vma(mm, address);
 	}
+#else
+	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
+		if (!user_mode(regs) && !search_exception_tables(regs->ip)) {
+			/*
+			 * Fault from code in kernel from
+			 * which we do not expect faults.
+			 */
+			bad_area_nosemaphore(regs, hw_error_code, address);
+			return;
+		}
+retry:
+		down_read(&mm->mmap_sem);
+	} else {
+		/*
+		 * The above down_read_trylock() might have succeeded in
+		 * which case we'll have missed the might_sleep() from
+		 * down_read():
+		 */
+		might_sleep();
+	}
+
+	vma = find_vma(mm, address);
+#endif
 	if (unlikely(!vma)) {
 		bad_area(regs, hw_error_code, address);
 		return;
@@ -1500,9 +1527,14 @@ good_area:
 		goto retry;
 	}
 
+#ifdef CONFIG_UKL_SAME_STACK
 	if (get_rwsem_lock){
 		up_read(&mm->mmap_sem);
 	}
+#else
+	up_read(&mm->mmap_sem);
+#endif
+	
 	if (unlikely(fault & VM_FAULT_ERROR)) {
 		mm_fault_error(regs, hw_error_code, address, fault);
 		return;

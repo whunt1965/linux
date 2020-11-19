@@ -290,7 +290,9 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-	/*movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp*/
+#ifndef CONFIG_UKL_SAME_STACK
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+#endif
 
 	/* Construct struct pt_regs on stack */
 	pushq   $__KERNEL_DS                            /* pt_regs->ss */
@@ -309,7 +311,9 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	addq	$8, %rdi
 	movq	%rdi, RSP(%rsp)
 
-	movq    %rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+#ifdef CONFIG_UKL_SAME_STACK
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+#endif
 
 	TRACE_IRQS_OFF
 
@@ -320,17 +324,20 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
-	/*jmp	swapgs_restore_regs_and_return_to_usermode*/
+#ifndef CONFIG_UKL_SAME_STACK
+	jmp	swapgs_restore_regs_and_return_to_usermode
+#else
 	POP_REGS pop_rdi=0
+	
+	popq	%rdi
+	addq	$8, %rsp /* need to get rid of orig_ax */
 
-	popq    %rdi
-	addq    $8, %rsp /* need to get rid of orig_ax */
-
-	pushq   %rax
-	call    enter_user
-	popq    %rax
+	pushq	%rax
+	call	enter_user
+	popq	%rax
 
 	INTERRUPT_RETURN
+#endif
 SYM_CODE_END(ukl_entry_SYSCALL_64)
 
 
@@ -400,8 +407,10 @@ SYM_CODE_START(ret_from_fork)
 	UNWIND_HINT_REGS
 	movq	%rsp, %rdi
 	call	syscall_return_slowpath	/* returns with IRQs disabled */
+#ifdef CONFIG_UKL_SAME_STACK
 	movq	RSP(%rsp), %rdi
 	call	find_user_vma
+#endif
 	TRACE_IRQS_ON			/* user mode is traced as IRQS on */
 	jmp	swapgs_restore_regs_and_return_to_usermode
 

@@ -361,9 +361,9 @@ static int bprm_mm_init(struct linux_binprm *bprm)
 
 	if(get_in_user() > 0){
 		bprm->mm = mm = &init_mm;
-	} else {
+        } else {
 		bprm->mm = mm = mm_alloc();
-	}
+        }
 
 	err = -ENOMEM;
 	if (!mm)

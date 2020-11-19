@@ -2571,11 +2571,7 @@ SYSCALL_DEFINE5(clone, unsigned long, clone_flags, unsigned long, newsp,
 #endif
 {
 	struct kernel_clone_args args = {
-#ifdef CONFIG_UKL_SAME_STACK
-		.flags          = (clone_flags & ~CSIGNAL),
-#else
 		.flags		= (lower_32_bits(clone_flags) & ~CSIGNAL),
-#endif
 		.pidfd		= parent_tidptr,
 		.child_tid	= child_tidptr,
 		.parent_tid	= parent_tidptr,

@@ -761,19 +761,9 @@ void __noreturn do_exit(long code)
 		 * If the last thread of global init has exited, panic
 		 * immediately to get a useable coredump.
 		 */
-		if (unlikely(is_global_init(tsk))){
-			/*if(get_in_user() == 0){
-				exit_user();
-				ret_from_fork();
-			}*/
-			printk("UKL exiting\n");
-			while(1){
-		       		current->state = TASK_INTERRUPTIBLE;
-		        	schedule();
-			}
+		if (unlikely(is_global_init(tsk)))
 			panic("Attempted to kill init! exitcode=0x%08x\n",
 				tsk->signal->group_exit_code ?: (int)code);
-		}
 
 #ifdef CONFIG_POSIX_TIMERS
 		hrtimer_cancel(&tsk->signal->real_timer);

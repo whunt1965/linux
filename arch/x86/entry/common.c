@@ -169,6 +169,7 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 			klp_update_patch_state(current);
 
 		/* deal with pending signal delivery */
+#ifdef CONFIG_UKL_SAME_STACK
 		if (cached_flags & _TIF_SIGPENDING){
 			if (get_in_user() > 0){
 				ukl_handle_signals();
@@ -176,6 +177,10 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 				do_signal(regs);
 			}
 		}
+#else
+		if (cached_flags & _TIF_SIGPENDING)
+			do_signal(regs);
+#endif
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
 			clear_thread_flag(TIF_NOTIFY_RESUME);
