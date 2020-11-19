@@ -40,5 +40,4 @@ config UNIKERNEL_LINUX
 config UKL_SAME_STACK
 	bool "Dont switch to kernel stack when entering the kernel"
 	depends on UNIKERNEL_LINUX
-	def_bool n
 
