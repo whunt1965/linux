@@ -1446,7 +1446,7 @@ retry:
 	}
 #else
 	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
-		if (!user_mode(regs) && !search_exception_tables(regs->ip)) {
+		if (get_in_user() == 0 && !user_mode(regs) && !search_exception_tables(regs->ip)) {
 			/*
 			 * Fault from code in kernel from
 			 * which we do not expect faults.
