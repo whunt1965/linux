@@ -312,7 +312,7 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	movq	%rdi, RSP(%rsp)
 
 #ifdef CONFIG_UKL_SAME_STACK
-	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 #endif
 
 	TRACE_IRQS_OFF
