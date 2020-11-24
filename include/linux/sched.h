@@ -655,6 +655,7 @@ struct task_struct {
 #ifdef CONFIG_UKL_SAME_STACK
 	struct vm_area_struct		*user_stack_vma;
 #endif
+	int				ukl_bypass_syscall;
 	refcount_t			usage;
 	/* Per task flags (PF_*), defined further below: */
 	unsigned int			flags;
