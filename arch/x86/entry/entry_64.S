@@ -308,6 +308,10 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
 	 * it is too small to ever cause noticeable irq latency.
 	 */
+
+  /* Push flags on user stack to preserve them */
+	pushfq
+
 	pushq	%rax
 	call	exit_user
 	popq	%rax
@@ -321,20 +325,18 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	/* Construct struct pt_regs on stack */
 	pushq   $__KERNEL_DS                            /* pt_regs->ss */
-        pushq   PER_CPU_VAR(cpu_tss_rw + TSS_sp2)       /* pt_regs->sp */
-        pushfq                                          /* pt_regs->flags */
-        pushq   $__KERNEL_CS                            /* pt_regs->cs */
-	pushq	%rcx					/* pt_regs->ip */
-	
-	pushq	%rax					/* pt_regs->orig_ax */
+  pushq   PER_CPU_VAR(cpu_tss_rw + TSS_sp2)       /* pt_regs->sp */
+  pushfq                                          /* pt_regs->flags */
+  pushq   $__KERNEL_CS                            /* pt_regs->cs */
+	pushq	%rcx                                      /* pt_regs->ip */
+
+	pushq	%rax                                      /* pt_regs->orig_ax */
 
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
 
 	movq	RSP(%rsp), %rdi
 	movq	(%rdi), %rsi
 	movq	%rsi, RIP(%rsp)
-	addq	$8, %rdi
-	movq	%rdi, RSP(%rsp)
 
 #ifdef CONFIG_UKL_SAME_STACK
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
@@ -349,20 +351,19 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
-#ifndef CONFIG_UKL_SAME_STACK
-	jmp	swapgs_restore_regs_and_return_to_usermode
-#else
-	POP_REGS pop_rdi=0
-	
-	popq	%rdi
-	addq	$8, %rsp /* need to get rid of orig_ax */
+	POP_REGS
 
 	pushq	%rax
 	call	enter_user
 	popq	%rax
 
-	INTERRUPT_RETURN
-#endif
+  /* Swing to user stack and pop flags */
+  movq 0x20(%rsp), %rsp
+  popfq
+
+  /* Return back to the app. */
+  retq
+
 SYM_CODE_END(ukl_entry_SYSCALL_64)
 
 
