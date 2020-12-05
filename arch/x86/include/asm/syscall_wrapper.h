@@ -250,7 +250,7 @@ extern void ukl_ss_k2u(void);
 #else
 #define __SYSCALL_DEFINEx(x, name, ...)					\
 	static long __se_sys##name(__MAP(x,__SC_LONG,__VA_ARGS__));	\
-	static inline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
+	static noinline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
 	__X64_SYS_STUBx(x, name, __VA_ARGS__)				\
 	__IA32_SYS_STUBx(x, name, __VA_ARGS__)				\
 	long __ukl##name(__MAP(x,__SC_DECL,__VA_ARGS__))		\
@@ -268,7 +268,7 @@ extern void ukl_ss_k2u(void);
 		__PROTECT(x, ret,__MAP(x,__SC_ARGS,__VA_ARGS__));	\
 		return ret;						\
 	}								\
-	static inline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))
+	static noinline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))
 #endif
 
 /*

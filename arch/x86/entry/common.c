@@ -349,11 +349,12 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 
 void set_ukl_bypass_syscall(int val){
 	current->ukl_bypass_syscall = val;
-	if(val == 1){
+	//printk("UKL set bypass to %d\n", val);
+	/*if(val == 1){
 		exit_user();
 	} else {
 		enter_user();
-	}
+	}*/
 }
 
 int get_ukl_bypass_syscall(void){
