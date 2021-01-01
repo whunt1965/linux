@@ -325,9 +325,9 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	/* Construct struct pt_regs on stack */
 	pushq   $__KERNEL_DS                            /* pt_regs->ss */
-  pushq   PER_CPU_VAR(cpu_tss_rw + TSS_sp2)       /* pt_regs->sp */
-  pushfq                                          /* pt_regs->flags */
-  pushq   $__KERNEL_CS                            /* pt_regs->cs */
+	pushq   PER_CPU_VAR(cpu_tss_rw + TSS_sp2)       /* pt_regs->sp */
+	pushfq                                          /* pt_regs->flags */
+	pushq   $__KERNEL_CS                            /* pt_regs->cs */
 	pushq	%rcx                                      /* pt_regs->ip */
 
 	pushq	%rax                                      /* pt_regs->orig_ax */
@@ -335,7 +335,7 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
 
 	movq	RSP(%rsp), %rdi
-	movq	(%rdi), %rsi
+	movq	8(%rdi), %rsi
 	movq	%rsi, RIP(%rsp)
 
 #ifdef CONFIG_UKL_SAME_STACK
@@ -357,13 +357,12 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	call	enter_user
 	popq	%rax
 
-  /* Swing to user stack and pop flags */
-  movq 0x20(%rsp), %rsp
-  popfq
+	/* Swing to user stack and pop flags */
+	movq 0x20(%rsp), %rsp
+	popfq
 
-  /* Return back to the app. */
-  retq
-
+	/* Return back to the app. */
+	retq
 SYM_CODE_END(ukl_entry_SYSCALL_64)
 
 
