@@ -347,7 +347,7 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 }
 #endif
 
-void set_ukl_bypass_syscall(int val){
+void ukl_set_bypass_syscall(int val){
 	current->ukl_bypass_syscall = val;
 	//printk("UKL set bypass to %d\n", val);
 	/*if(val == 1){
@@ -357,7 +357,7 @@ void set_ukl_bypass_syscall(int val){
 	}*/
 }
 
-int get_ukl_bypass_syscall(void){
+int ukl_get_bypass_syscall(void){
 	return current->ukl_bypass_syscall;
 }
 

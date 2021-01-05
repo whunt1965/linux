@@ -1168,8 +1168,8 @@ static int load_elf_binary(struct linux_binprm *bprm)
 	if(get_in_user() == 0){
 		start_thread(regs, elf_entry, bprm->p);
 	} else {
-		extern void _start (void);
-		start_thread(regs, (unsigned long) _start, bprm->p);
+		extern void ukl__start (void);
+		start_thread(regs, (unsigned long) ukl__start, bprm->p);
 	}
 	retval = 0;
 out:

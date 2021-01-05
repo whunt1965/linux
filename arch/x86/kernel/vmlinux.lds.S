@@ -232,6 +232,13 @@ SECTIONS
 	. = ALIGN(PAGE_SIZE);
 
 	/*  */
+	.rela.plt       :
+	{
+	   *(.rela.plt)
+           PROVIDE_HIDDEN (__rela_iplt_start = .);
+           *(.rela.iplt)
+           PROVIDE_HIDDEN (__rela_iplt_end = .);
+	}
 	.preinit_array     :
 	{
 		PROVIDE_HIDDEN (__preinit_array_start = .);
