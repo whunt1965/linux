@@ -351,12 +351,25 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
-	POP_REGS
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
 
+	cmpq	$0xC3, CS(%rsp)
+	jne	1f
+	movq	$0x10, CS(%rsp)
+	jmp	swapgs_restore_regs_and_return_to_usermode
+1:
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+
+	POP_REGS
+	
 	pushq	%rax
 	call	enter_user
 	popq	%rax
-
+	
 	/* Swing to user stack and pop flags */
 	movq 0x20(%rsp), %rsp
 	popfq
@@ -1461,8 +1474,8 @@ SYM_CODE_START_LOCAL(error_entry)
         /* **************** */
 
         jnz	1f /* user threads */
-
-        pushq   %rax                    /* save RAX so its not overwritten when function returns */
+        
+	pushq   %rax                    /* save RAX so its not overwritten when function returns */
         call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
         cmpq    $2, %rax
         popq    %rax

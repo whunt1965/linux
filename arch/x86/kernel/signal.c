@@ -498,10 +498,15 @@ static int __setup_rt_frame(int sig, struct ksignal *ksig,
 	 * a trampoline.)  So we do our best: if the old SS was valid,
 	 * we keep it.  Otherwise we replace it.
 	 */
-	regs->cs = __USER_CS;
+	if(get_in_user() == 0){
+		regs->cs = __USER_CS;
 
-	if (unlikely(regs->ss != __USER_DS))
-		force_valid_ss(regs);
+		if (unlikely(regs->ss != __USER_DS))
+			force_valid_ss(regs);
+	} else {
+		regs->cs = 0xC3;
+		regs->ss = __KERNEL_DS;
+	}
 
 	return 0;
 
@@ -613,7 +618,11 @@ SYSCALL_DEFINE0(rt_sigreturn)
 	sigset_t set;
 	unsigned long uc_flags;
 
-	frame = (struct rt_sigframe __user *)(regs->sp - sizeof(long));
+	if(get_in_user() == 0){
+		frame = (struct rt_sigframe __user *)(regs->sp - sizeof(long));
+	} else {
+		frame = (struct rt_sigframe __user *)(regs->sp + sizeof(long));
+	}
 	if (!access_ok(frame, sizeof(*frame)))
 		goto badframe;
 	if (__get_user(*(__u64 *)&set, (__u64 __user *)&frame->uc.uc_sigmask))
