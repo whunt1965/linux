@@ -302,16 +302,15 @@ SYM_CODE_START(ukl_ss_k2u)
 SYM_CODE_END(ukl_ss_k2u)
 
 SYM_CODE_START(ukl_entry_SYSCALL_64)
+	/* syscalls will always come from user code so we dont need to 
+	check stack cs value. We will leave that as 0x10, because kernel 
+	entry and exit code will always run on syscall path, no need to check cs on stack */
 	UNWIND_HINT_EMPTY
 	/*
 	 * Interrupts are off on entry.
 	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
 	 * it is too small to ever cause noticeable irq latency.
 	 */
-
-  /* Push flags on user stack to preserve them */
-	pushfq
-
 	pushq	%rax
 	call	exit_user
 	popq	%rax
@@ -326,6 +325,7 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* Construct struct pt_regs on stack */
 	pushq   $__KERNEL_DS                            /* pt_regs->ss */
 	pushq   PER_CPU_VAR(cpu_tss_rw + TSS_sp2)       /* pt_regs->sp */
+	/* pushfq has correct flags because all instructions before it dont touch the flags */
 	pushfq                                          /* pt_regs->flags */
 	pushq   $__KERNEL_CS                            /* pt_regs->cs */
 	pushq	%rcx                                      /* pt_regs->ip */
@@ -334,11 +334,17 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
 
+	/* fixing up user rip because rcx contains garnage. Thats
+	because we didnt come here through a syscall instruction, we used call */
+
 	movq	RSP(%rsp), %rdi
 	movq	8(%rdi), %rsi
 	movq	%rsi, RIP(%rsp)
 
 #ifdef CONFIG_UKL_SAME_STACK
+	/* just for clone in no stack switch case
+	clone takes parent's pt_regs from tss_sp2 
+	which is a scratch space */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 #endif
 
@@ -351,10 +357,19 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	TRACE_IRQS_ON			/* return enables interrupts */
 
+	/* Unified ret path for syscalls, interrupts and faults  */
+#ifndef CONFIG_UKL_USE_RET
+	/* fix user stack so ret address is not the last thing on stack */ 
+	movq	RSP(%rsp), %r15
+	addq	$8, %r15
+	movq	%r15, RSP(%rsp)
+#endif
+	jmp	ukl_syscall_return
+/* TODO: Fix signal handler context creation to use __KERNEL_CS instead of 0xc3 */
 	/* **************** */
 	/*  UKL CODE START  */
 	/* **************** */
-
+	/* special signal handling case */
 	cmpq	$0xC3, CS(%rsp)
 	jne	1f
 	movq	$0x10, CS(%rsp)
@@ -764,6 +779,17 @@ ret_from_intr:
 	TRACE_IRQS_ON
 
 SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
+	/* add return address to stack */
+#ifdef CONFIG_UKL_USE_RET
+	cmpq	$3, CS(%rsp)	
+	jne	ukl_syscall_return
+	movq	RIP(%rsp), %r15 /* return address in r15 */	
+	movq	RSP(%rsp), %r14	 /* user stack in r14 */
+	subq	$8, %r14
+	movq	%r15, (%r14)
+	movq	%r14, RSP(%rsp)
+#endif
+ukl_syscall_return:
 #ifdef CONFIG_DEBUG_ENTRY
 	/* Assert that pt_regs indicates user mode. */
 	testb	$3, CS(%rsp)
@@ -771,6 +797,7 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	ud2
 1:
 #endif
+
 	POP_REGS pop_rdi=0
 
 	/*
@@ -813,7 +840,16 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
         call    enter_user
         popq    %rax
 
+#ifdef CONFIG_UKL_USE_RET
+	cmpq	$3, CS(%rsp)	
+	jne	non_ukl_return
+	/* Swing to user stack and pop flags */
+        movq 0x20(%rsp), %rsp
+	retq
+non_ukl_return:
+#else
 	INTERRUPT_RETURN
+#endif
 1:
         /* **************** */
         /*   UKL CODE END   */
@@ -1131,6 +1167,11 @@ apicinterrupt IRQ_WORK_VECTOR			irq_work_interrupt		smp_irq_work_interrupt
 .macro idtentry sym do_sym has_error_code:req paranoid=0 shift_ist=-1 ist_offset=0 create_gap=0 read_cr2=0
 SYM_CODE_START(\sym)
 	UNWIND_HINT_IRET_REGS offset=\has_error_code*8
+
+        .if \paranoid == 2
+        movq    $0x2, (%rsp)
+        jmp     page_fault
+        .endif
 
 	/* Sanity check */
 	.if \shift_ist != -1 && \paranoid != 1

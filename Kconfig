@@ -41,3 +41,7 @@ config UKL_SAME_STACK
 	bool "Dont switch to kernel stack when entering the kernel"
 	depends on UNIKERNEL_LINUX
 
+config UKL_USE_RET
+	bool "Use ret instead of iret when returning from kernel after syscalls, interrupts and faults"
+	depends on UNIKERNEL_LINUX
+
