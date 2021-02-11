@@ -189,7 +189,7 @@ static const __initconst struct idt_data ist_idts[] = {
 	ISTG(X86_TRAP_MC,	&machine_check,	IST_INDEX_MCE),
 #endif
 #ifdef CONFIG_UNIKERNEL_LINUX
-	ISTG(X86_TRAP_PF,       page_fault,          IST_INDEX_PF),
+	//ISTG(X86_TRAP_PF,       page_fault,          IST_INDEX_PF),
 #endif
 
 };
@@ -380,11 +380,11 @@ void __init update_intr_gate(unsigned int n, const void *addr)
 {
 	if (WARN_ON_ONCE(!test_bit(n, system_vectors)))
 		return;
-#ifdef CONFIG_UNIKERNEL_LINUX
-	set_intr_gate_pf(n, addr);
-#else
+//#ifdef CONFIG_UNIKERNEL_LINUX
+//	set_intr_gate_pf(n, addr);
+//#else
 	set_intr_gate(n, addr);
-#endif
+//#endif
 }
 
 void alloc_intr_gate(unsigned int n, const void *addr)

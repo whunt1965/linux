@@ -781,8 +781,8 @@ ret_from_intr:
 SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	/* add return address to stack */
 #ifdef CONFIG_UKL_USE_RET
-	cmpq	$3, CS(%rsp)	
-	jne	ukl_syscall_return
+	cmpq	$0x33, CS(%rsp)	
+	je	ukl_syscall_return
 	movq	RIP(%rsp), %r15 /* return address in r15 */	
 	movq	RSP(%rsp), %r14	 /* user stack in r14 */
 	subq	$8, %r14
@@ -841,12 +841,9 @@ ukl_syscall_return:
         popq    %rax
 
 #ifdef CONFIG_UKL_USE_RET
-	cmpq	$3, CS(%rsp)	
-	jne	non_ukl_return
 	/* Swing to user stack and pop flags */
-        movq 0x20(%rsp), %rsp
+        movq 0x18(%rsp), %rsp
 	retq
-non_ukl_return:
 #else
 	INTERRUPT_RETURN
 #endif
