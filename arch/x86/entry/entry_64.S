@@ -363,6 +363,46 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 
 	TRACE_IRQS_ON                   /* return enables interrupts */
 
+#ifdef CONFIG_UKL_SAME_STACK
+	/* add return address to stack */
+#ifdef CONFIG_UKL_USE_RET
+	cmpq	$0x33, CS(%rsp)	
+	je	ukl_syscall_return
+	movq	RIP(%rsp), %r15 /* return address in r15 */	
+	movq	RSP(%rsp), %r14	 /* user stack in r14 */
+	subq	$8, %r14
+	movq	%r15, (%r14)
+	movq	%r14, RSP(%rsp)
+#endif
+
+	POP_REGS
+
+	/*
+	 * The stack is now user orig_ax, RIP, CS, EFLAGS, RSP, SS.
+	 * Save old stack pointer and switch to trampoline stack.
+	 */
+	addq    $8, %rsp
+
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
+
+	pushq   %rax
+	call    enter_user
+	popq    %rax
+
+#ifdef CONFIG_UKL_USE_RET
+	/* Swing to user stack and pop flags */
+	movq 0x18(%rsp), %rsp
+	retq
+#else
+	INTERRUPT_RETURN
+#endif
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
+#endif
+
 	/* **************** */
 	/*  UKL CODE START  */
 	/* **************** */
