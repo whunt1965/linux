@@ -118,8 +118,10 @@ static int restore_sigcontext(struct pt_regs *regs,
 #endif /* CONFIG_X86_64 */
 
 	/* Get CS/SS and force CPL3 */
-	regs->cs = sc.cs | 0x03;
-	regs->ss = sc.ss | 0x03;
+	if(get_in_user() == 0){
+		regs->cs = sc.cs | 0x03;
+		regs->ss = sc.ss | 0x03;
+	}
 
 	regs->flags = (regs->flags & ~FIX_EFLAGS) | (sc.flags & FIX_EFLAGS);
 	/* disable syscall checks */
@@ -621,7 +623,11 @@ SYSCALL_DEFINE0(rt_sigreturn)
 	if(get_in_user() == 0){
 		frame = (struct rt_sigframe __user *)(regs->sp - sizeof(long));
 	} else {
-		frame = (struct rt_sigframe __user *)(regs->sp + sizeof(long));
+#ifdef CONFIG_UKL_USE_RET
+		frame = (struct rt_sigframe __user *)(regs->sp);
+#else
+		frame = (struct rt_sigframe __user *)(regs->sp - sizeof(long));
+#endif
 	}
 	if (!access_ok(frame, sizeof(*frame)))
 		goto badframe;

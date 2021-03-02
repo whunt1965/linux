@@ -311,15 +311,16 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
 	 * it is too small to ever cause noticeable irq latency.
 	 */
-	pushq	%rax
-	call	exit_user
-	popq	%rax
+
+	pushq   %rax
+	call    exit_user
+	popq    %rax
 
 	/* tss.sp2 is scratch space. */
-	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+	movq    %rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
 #ifndef CONFIG_UKL_SAME_STACK
-	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+	movq    PER_CPU_VAR(cpu_current_top_of_stack), %rsp
 #endif
 
 	/* Construct struct pt_regs on stack */
@@ -328,69 +329,54 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* pushfq has correct flags because all instructions before it dont touch the flags */
 	pushfq                                          /* pt_regs->flags */
 	pushq   $__KERNEL_CS                            /* pt_regs->cs */
-	pushq	%rcx                                      /* pt_regs->ip */
+	pushq   %rcx                                      /* pt_regs->ip */
 
-	pushq	%rax                                      /* pt_regs->orig_ax */
+	pushq   %rax                                      /* pt_regs->orig_ax */
 
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
 
-	/* fixing up user rip because rcx contains garnage. Thats
+	/* fixing up user rip because rcx contains garbage. Thats
 	because we didnt come here through a syscall instruction, we used call */
 
-	movq	RSP(%rsp), %rdi
-	movq	8(%rdi), %rsi
-	movq	%rsi, RIP(%rsp)
+	movq    RSP(%rsp), %rdi
+	movq    (%rdi), %rsi
+	movq    %rsi, RIP(%rsp)
+#ifndef CONFIG_UKL_USE_RET
+	/* fix user stack so ret address is not the last thing on stack */
+	addq    $8, %rdi
+	movq    %rdi, RSP(%rsp)
+#endif
 
 #ifdef CONFIG_UKL_SAME_STACK
 	/* just for clone in no stack switch case
 	clone takes parent's pt_regs from tss_sp2 
 	which is a scratch space */
-	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+	movq    %rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 #endif
 
 	TRACE_IRQS_OFF
 
 	/* IRQs are off. */
-	movq	%rax, %rdi
-	movq	%rsp, %rsi
-	call	do_syscall_64		/* returns with IRQs disabled */
+	movq    %rax, %rdi
+	movq    %rsp, %rsi
+	call    do_syscall_64           /* returns with IRQs disabled */
 
-	TRACE_IRQS_ON			/* return enables interrupts */
+	TRACE_IRQS_ON                   /* return enables interrupts */
 
-	/* Unified ret path for syscalls, interrupts and faults  */
-#ifndef CONFIG_UKL_USE_RET
-	/* fix user stack so ret address is not the last thing on stack */ 
-	movq	RSP(%rsp), %r15
-	addq	$8, %r15
-	movq	%r15, RSP(%rsp)
-#endif
-	jmp	ukl_syscall_return
-/* TODO: Fix signal handler context creation to use __KERNEL_CS instead of 0xc3 */
 	/* **************** */
 	/*  UKL CODE START  */
 	/* **************** */
 	/* special signal handling case */
-	cmpq	$0xC3, CS(%rsp)
-	jne	1f
-	movq	$0x10, CS(%rsp)
-	jmp	swapgs_restore_regs_and_return_to_usermode
+	cmpq    $0xC3, CS(%rsp)
+	jne     1f
+	movq    $0x10, CS(%rsp)
+	jmp     swapgs_restore_regs_and_return_to_usermode
 1:
 	/* **************** */
 	/*   UKL CODE END   */
 	/* **************** */
 
-	POP_REGS
-	
-	pushq	%rax
-	call	enter_user
-	popq	%rax
-	
-	/* Swing to user stack and pop flags */
-	movq 0x20(%rsp), %rsp
-	popfq
-
-	/* Return back to the app. */
-	retq
+	jmp     ukl_syscall_return
 SYM_CODE_END(ukl_entry_SYSCALL_64)
 
 
@@ -652,24 +638,24 @@ SYM_CODE_START(interrupt_entry)
 	 */	
 1:
 	/* **************** */
-        /*  UKL CODE START  */
-        /* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
 
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $2, %rax
-        popq    %rax
-        jb      3f
+	call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+	cmpq    $2, %rax
+	popq    %rax
+	jb      3f
 
-        movq    $0xC3, CS-ORIG_RAX+8(%rsp)
+	movq    $0xC3, CS-ORIG_RAX+8(%rsp)
 	
 	pushq   %rax
-        call    exit_user
+	call    exit_user
 	popq   %rax
 
 	/* **************** */
-        /*   UKL CODE END   */
-        /* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
 2:
 	pushq	%rdi
 
@@ -763,16 +749,16 @@ ret_from_intr:
 	/* Interrupt came from user space */
 .Lretint_user:
 	/* **************** */
-        /*  UKL CODE START  */
-        /* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
 
 	cmpq    $0xC3, CS(%rsp)
-        jne	1f
+	jne	1f
 	movq    $0x10, CS(%rsp)
 1:
-        /* **************** */
-        /*   UKL CODE END   */
-        /* **************** */
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
 
 	mov	%rsp,%rdi
 	call	prepare_exit_to_usermode
@@ -830,27 +816,27 @@ ukl_syscall_return:
 	popq	%rdi
 
 	/* **************** */
-        /*  UKL CODE START  */
-        /* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
 
 	cmpq    $0x33, 8(%rsp)
-        je	1f
+	je	1f
 
 	pushq   %rax
-        call    enter_user
-        popq    %rax
+	call    enter_user
+	popq    %rax
 
 #ifdef CONFIG_UKL_USE_RET
 	/* Swing to user stack and pop flags */
-        movq 0x18(%rsp), %rsp
+	movq 0x18(%rsp), %rsp
 	retq
 #else
 	INTERRUPT_RETURN
 #endif
 1:
-        /* **************** */
-        /*   UKL CODE END   */
-        /* **************** */
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
 
 	SWAPGS
 	INTERRUPT_RETURN
@@ -1165,10 +1151,10 @@ apicinterrupt IRQ_WORK_VECTOR			irq_work_interrupt		smp_irq_work_interrupt
 SYM_CODE_START(\sym)
 	UNWIND_HINT_IRET_REGS offset=\has_error_code*8
 
-        .if \paranoid == 2
-        movq    $0x2, (%rsp)
-        jmp     page_fault
-        .endif
+	.if \paranoid == 2
+	movq    $0x2, (%rsp)
+	jmp     page_fault
+	.endif
 
 	/* Sanity check */
 	.if \shift_ist != -1 && \paranoid != 1
@@ -1190,19 +1176,19 @@ SYM_CODE_START(\sym)
 	jnz	.Lfrom_usermode_switch_stack_\@
 
 	/* **************** */
-        /*  UKL CODE START  */
-        /* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
 	
-        pushq   %rax                    / * save RAX so its not overwritten when function returns * /
-        call    get_in_user             / * Get in_user value to see if we are a UKL thread or not * /
-        cmpq    $2, %rax
-        popq    %rax
-        jb      1f
+	pushq   %rax                    / * save RAX so its not overwritten when function returns * /
+	call    get_in_user             / * Get in_user value to see if we are a UKL thread or not * /
+	cmpq    $2, %rax
+	popq    %rax
+	jb      1f
 	movq	$0xC3, CS-ORIG_RAX(%rsp)
 1:
-        /* **************** */
-        /*   UKL CODE END   */
-        /* **************** */
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
 
 	.endif
 /*.Lfrom_ukl_kernelmode_\@:*/
@@ -1507,27 +1493,27 @@ SYM_CODE_START_LOCAL(error_entry)
 	ENCODE_FRAME_POINTER 8
 	testb	$3, CS+8(%rsp)
 
-        /* **************** */
-        /*  UKL CODE START  */
-        /* **************** */
+	/* **************** */
+	/*  UKL CODE START  */
+	/* **************** */
 
-        jnz	1f /* user threads */
-        
+	jnz	1f /* user threads */
+	
 	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-        call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-        cmpq    $2, %rax
-        popq    %rax
+	call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
+	cmpq    $2, %rax
+	popq    %rax
 	jb	.Lerror_kernelspace
 
-        movq    $0xC3, CS+8(%rsp)
+	movq    $0xC3, CS+8(%rsp)
 	pushq   %rax
-        call    exit_user
+	call    exit_user
 	popq   %rax
 	jmp	2f
 
-        /* **************** */
-        /*   UKL CODE END   */
-        /* **************** */
+	/* **************** */
+	/*   UKL CODE END   */
+	/* **************** */
 
 	/*
 	 * We entered from user mode or we're pretending to have entered
@@ -1594,7 +1580,7 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * gsbase and CR3.  Switch to kernel gsbase and CR3:
 	 */
 1:
-        jmp 1b
+	jmp 1b
 	SWAPGS
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
@@ -1686,7 +1672,7 @@ SYM_CODE_START(nmi)
 	 * stacks lest we corrupt the "NMI executing" variable.
 	 */
 1:
-        jmp 1b
+	jmp 1b
 	swapgs
 	cld
 	FENCE_SWAPGS_USER_ENTRY
@@ -1934,7 +1920,7 @@ end_repeat_nmi:
 	jnz	nmi_restore
 nmi_swapgs:
 1:
-        jmp 1b
+	jmp 1b
 	SWAPGS_UNSAFE_STACK
 nmi_restore:
 	POP_REGS
