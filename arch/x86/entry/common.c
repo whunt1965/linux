@@ -179,9 +179,6 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 		}
 #else
 		if (cached_flags & _TIF_SIGPENDING){
-			if (get_in_user() > 0){
-				printk("Thread %d has signal pending\n", current->pid);
-			}
 			do_signal(regs);
 		}
 #endif
@@ -332,13 +329,6 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 	enter_from_user_mode();
 	local_irq_enable();
 	ti = current_thread_info();
-	if(get_in_user() > 0){
-		if (READ_ONCE(ti->flags) & _TIF_SIGPENDING){
-			printk("Thread %d Syscall No. %d has signal pending\n", current->pid, nr);
-		} else {
-		       	printk("Thread %d Syscall No. %d\n", current->pid, nr);
-		}
-	}
 
 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY)
 		nr = syscall_trace_enter(regs);
@@ -370,10 +360,15 @@ void ukl_set_bypass_syscall(int val){
 }
 
 int ukl_get_bypass_syscall(void){
+	struct thread_info *ti;
 	int ret = current->ukl_bypass_syscall;
 	
 	if (ret == 0)
 		return ret;
+
+        ti = current_thread_info();
+        if (READ_ONCE(ti->flags) & _TIF_SIGPENDING)
+		return 0;
 
 	current->ukl_bypass_current++;
 	if (current->ukl_bypass_current >= current->ukl_bypass_limit){
