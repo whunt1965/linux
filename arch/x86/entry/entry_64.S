@@ -1151,10 +1151,12 @@ apicinterrupt IRQ_WORK_VECTOR			irq_work_interrupt		smp_irq_work_interrupt
 SYM_CODE_START(\sym)
 	UNWIND_HINT_IRET_REGS offset=\has_error_code*8
 
+#ifndef CONFIG_UKL_USE_IST_PF
 	.if \paranoid == 2
 	movq    $0x2, (%rsp)
 	jmp     page_fault
 	.endif
+#endif
 
 	/* Sanity check */
 	.if \shift_ist != -1 && \paranoid != 1

@@ -188,8 +188,8 @@ static const __initconst struct idt_data ist_idts[] = {
 #ifdef CONFIG_X86_MCE
 	ISTG(X86_TRAP_MC,	&machine_check,	IST_INDEX_MCE),
 #endif
-#ifdef CONFIG_UNIKERNEL_LINUX
-	//ISTG(X86_TRAP_PF,       page_fault,          IST_INDEX_PF),
+#ifdef CONFIG_UKL_USE_IST_PF
+	ISTG(X86_TRAP_PF,       page_fault,          IST_INDEX_PF),
 #endif
 
 };
@@ -246,25 +246,6 @@ static void set_intr_gate(unsigned int n, const void *addr)
 
 	idt_setup_from_table(idt_table, &data, 1, false);
 }
-
-#ifdef CONFIG_UNIKERNEL_LINUX
-static void set_intr_gate_pf(unsigned int n, const void *addr)
-{
-	struct idt_data data;
-	
-	BUG_ON(n > 0xFF);
-	
-	memset(&data, 0, sizeof(data));
-	data.vector     = n;
-	data.addr       = addr;
-	data.segment    = __KERNEL_CS;
-	data.bits.type  = GATE_INTERRUPT;
-	data.bits.p     = 1;
-	
-	data.bits.ist   = IST_INDEX_PF + 1;
-	idt_setup_from_table(idt_table, &data, 1, false);
-}
-#endif
 
 /**
  * idt_setup_early_traps - Initialize the idt table with early traps
@@ -380,11 +361,7 @@ void __init update_intr_gate(unsigned int n, const void *addr)
 {
 	if (WARN_ON_ONCE(!test_bit(n, system_vectors)))
 		return;
-//#ifdef CONFIG_UNIKERNEL_LINUX
-//	set_intr_gate_pf(n, addr);
-//#else
 	set_intr_gate(n, addr);
-//#endif
 }
 
 void alloc_intr_gate(unsigned int n, const void *addr)
