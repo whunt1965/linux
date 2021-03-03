@@ -764,7 +764,7 @@ ret_from_intr:
 	/* **************** */
 
 	mov	%rsp,%rdi
-	/*call	prepare_exit_to_usermode*/
+	call	prepare_exit_to_usermode
 	TRACE_IRQS_ON
 SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	/* add return address to stack */
