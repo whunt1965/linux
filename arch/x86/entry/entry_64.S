@@ -276,6 +276,7 @@ syscall_return_via_sysret:
 SYM_CODE_END(entry_SYSCALL_64)
 
 SYM_CODE_START(ukl_ss_u2k)
+	cli
 	pushq	%rax
 	call	exit_user
 	movq	%rsp, %rax
@@ -285,19 +286,21 @@ SYM_CODE_START(ukl_ss_u2k)
 	subq	$0x10, %rax
 	pushq	8(%rax)
 	movq	(%rax), %rax
+	sti
 	retq
 SYM_CODE_END(ukl_ss_u2k)
 
 SYM_CODE_START(ukl_ss_k2u)
+	cli
 	pushq	%rax
 	movq	%rsp, %rax
 	movq	0x10(%rax), %rsp
 	pushq	8(%rax)
 	movq	(%rax), %rax
-	
 	pushq	%rax
 	call	enter_user
 	popq	%rax
+	sti
 	retq
 SYM_CODE_END(ukl_ss_k2u)
 
@@ -761,9 +764,8 @@ ret_from_intr:
 	/* **************** */
 
 	mov	%rsp,%rdi
-	call	prepare_exit_to_usermode
+	/*call	prepare_exit_to_usermode*/
 	TRACE_IRQS_ON
-
 SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	/* add return address to stack */
 #ifdef CONFIG_UKL_USE_RET

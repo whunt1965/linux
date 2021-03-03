@@ -178,8 +178,12 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 			}
 		}
 #else
-		if (cached_flags & _TIF_SIGPENDING)
+		if (cached_flags & _TIF_SIGPENDING){
+			if (get_in_user() > 0){
+				printk("Thread %d has signal pending\n", current->pid);
+			}
 			do_signal(regs);
+		}
 #endif
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
@@ -328,6 +332,14 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 	enter_from_user_mode();
 	local_irq_enable();
 	ti = current_thread_info();
+	if(get_in_user() > 0){
+		if (READ_ONCE(ti->flags) & _TIF_SIGPENDING){
+			printk("Thread %d Syscall No. %d has signal pending\n", current->pid, nr);
+		} else {
+		       	printk("Thread %d Syscall No. %d\n", current->pid, nr);
+		}
+	}
+
 	if (READ_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY)
 		nr = syscall_trace_enter(regs);
 
@@ -347,18 +359,29 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 }
 #endif
 
+void ukl_set_bypass_limit(int val){
+	current->ukl_bypass_limit = val;
+}
+
 void ukl_set_bypass_syscall(int val){
 	current->ukl_bypass_syscall = val;
-	//printk("UKL set bypass to %d\n", val);
-	/*if(val == 1){
-		exit_user();
-	} else {
-		enter_user();
-	}*/
+	if (current->ukl_bypass_limit == 0)
+		current->ukl_bypass_limit = 1000;
 }
 
 int ukl_get_bypass_syscall(void){
-	return current->ukl_bypass_syscall;
+	int ret = current->ukl_bypass_syscall;
+	
+	if (ret == 0)
+		return ret;
+
+	current->ukl_bypass_current++;
+	if (current->ukl_bypass_current >= current->ukl_bypass_limit){
+		current->ukl_bypass_current = 0;
+		ret = 0;
+	}
+
+	return ret;
 }
 
 #ifdef CONFIG_UKL_SAME_STACK

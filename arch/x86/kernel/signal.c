@@ -506,7 +506,8 @@ static int __setup_rt_frame(int sig, struct ksignal *ksig,
 		if (unlikely(regs->ss != __USER_DS))
 			force_valid_ss(regs);
 	} else {
-		regs->cs = 0xC3;
+		//regs->cs = 0xC3;
+		regs->cs = __KERNEL_CS;
 		regs->ss = __KERNEL_DS;
 	}
 
