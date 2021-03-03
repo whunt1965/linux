@@ -349,16 +349,28 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 
 void ukl_set_bypass_syscall(int val){
 	current->ukl_bypass_syscall = val;
-	//printk("UKL set bypass to %d\n", val);
-	/*if(val == 1){
-		exit_user();
-	} else {
-		enter_user();
-	}*/
+	if (current->ukl_bypass_limit == 0)
+		current->ukl_bypass_limit = 1000;
 }
 
 int ukl_get_bypass_syscall(void){
-	return current->ukl_bypass_syscall;
+	struct thread_info *ti;
+	int ret = current->ukl_bypass_syscall;
+	
+	if (ret == 0)
+	        return ret;
+	
+	ti = current_thread_info();
+	if (READ_ONCE(ti->flags) & _TIF_SIGPENDING)
+	        return 0;
+
+	current->ukl_bypass_current++;
+	if (current->ukl_bypass_current >= current->ukl_bypass_limit){
+	        current->ukl_bypass_current = 0;
+	        ret = 0;
+	}
+
+	return ret;
 }
 
 #ifdef CONFIG_UKL_SAME_STACK
