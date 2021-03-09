@@ -1400,7 +1400,6 @@ static int ukl_create_userspace(void* arg){
 	const char *init_filename = ukl_args->init_filename;
 	const char * const *ukl_argv_init = ukl_args->__argv;
         const char * const *ukl_envp_init = ukl_args->__envp;
-        const char *const *p;
 
 	printk("PID %d and in_user is %d is creating userspace.\n",\
                         current->pid, get_in_user());
