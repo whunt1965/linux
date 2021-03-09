@@ -28,6 +28,7 @@
 	char	PF_stack_guard[guardsize];	\
 	char	PF_stack[EXCEPTION_STKSZ];	\
 	char	IST_top_guard[guardsize];	\
+
 #else
 #define ESTACKS_MEMBERS(guardsize, db2_holesize)\
 	char	DF_stack_guard[guardsize];	\
@@ -45,6 +46,7 @@
 	char	PF_stack_guard[guardsize];	\
 	char	PF_stack[EXCEPTION_STKSZ];	\
 	char	IST_top_guard[guardsize];	\
+
 #endif
 
 /* The exception stacks' physical storage. No guard pages required */
