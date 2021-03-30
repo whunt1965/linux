@@ -345,6 +345,12 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* fix user stack so ret address is not the last thing on stack */
 	addq    $8, %rdi
 	movq    %rdi, RSP(%rsp)
+#else
+	subq    $8, %rdi
+        movq    EFLAGS(%rsp), %rsi /* EFLAGS in rsi */
+        movq    %rsi, (%rdi)
+        movq    %rdi, RSP(%rsp)
+	
 #endif
 
 #ifdef CONFIG_UKL_SAME_STACK
@@ -380,11 +386,13 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	cmpq    $0xC3, CS(%rsp) 
 	jne	2f      
 	movq    $0x10, CS(%rsp)
-	movq    RIP(%rsp), %r15 /* return address in r15 */     
-	movq    RSP(%rsp), %r14  /* user stack in r14 */
-	subq    $8, %r14
-	movq    %r15, (%r14)
-	movq    %r14, RSP(%rsp)
+	movq	RIP(%rsp), %r15 /* return address in r15 */	
+	movq	RSP(%rsp), %r14	 /* user stack in r14 */
+	subq	$0x10, %r14
+	movq	%r15, 8(%r14)
+	movq	EFLAGS(%rsp), %r15 /* EFLAGS in r15 */	
+	movq	%r15, (%r14)
+	movq	%r14, RSP(%rsp)
 2:
 #endif
 	POP_REGS
@@ -402,6 +410,7 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 #ifdef CONFIG_UKL_USE_RET
 	/* Swing to user stack and pop flags */
 	movq 0x18(%rsp), %rsp
+	popfq
 	retq
 #else
 	INTERRUPT_RETURN
@@ -802,7 +811,9 @@ SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
 	je	ukl_syscall_return
 	movq	RIP(%rsp), %r15 /* return address in r15 */	
 	movq	RSP(%rsp), %r14	 /* user stack in r14 */
-	subq	$8, %r14
+	subq	$0x10, %r14
+	movq	%r15, 8(%r14)
+	movq	EFLAGS(%rsp), %r15 /* EFLAGS in r15 */	
 	movq	%r15, (%r14)
 	movq	%r14, RSP(%rsp)
 #endif
@@ -860,6 +871,7 @@ ukl_syscall_return:
 #ifdef CONFIG_UKL_USE_RET
 	/* Swing to user stack and pop flags */
 	movq 0x18(%rsp), %rsp
+	popfq
 	retq
 #else
 	INTERRUPT_RETURN
