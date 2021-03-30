@@ -703,10 +703,19 @@ static void check_stack_usage(void)
 static inline void check_stack_usage(void) {}
 #endif
 
+#ifdef UKL_CREATE_AFTERSPACE
+extern struct completion ukl_done;
+#endif
 void __noreturn do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
+
+#ifdef UKL_CREATE_AFTERSPACE
+	if (unlikely(is_global_init(tsk))){
+		complete(&ukl_done);
+	}
+#endif
 
 	profile_task_exit(tsk);
 	kcov_task_exit(tsk);

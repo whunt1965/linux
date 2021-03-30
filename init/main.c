@@ -1408,13 +1408,22 @@ static int ukl_create_userspace(void* arg){
 		(const char __user *const __user *)ukl_envp_init);
 }
 
+#ifdef UKL_CREATE_AFTERSPACE
+DECLARE_COMPLETION(ukl_done);
+static int ukl_create_afterspace(void* tmp){
+	wait_for_completion(&ukl_done);
+        printk("PID %d and in_user is %d is creating afterspace.\n",\
+                        current->pid, get_in_user());
+        return do_execve(getname_kernel("/afterinit"), NULL, NULL);
+}
+#endif
+
 static int __ref kernel_init(void *unused)
 {
 	int ret;
 	const char *ukl_argv_init[MAX_INIT_ARGS+2];
 	const char *ukl_envp_init[MAX_INIT_ENVS+2];
 	int i;
-	const char *const *p;
 	struct ukl_init_args ukl_args;
 
 	for(i = 0; i < MAX_INIT_ARGS+2; i++){
@@ -1449,6 +1458,10 @@ static int __ref kernel_init(void *unused)
 	ukl_args.__envp = ukl_envp_init;
 	kernel_thread(ukl_create_userspace, (void *)&ukl_args, CLONE_FS);
 	
+#ifdef UKL_CREATE_AFTERSPACE
+	kernel_thread(ukl_create_afterspace, NULL, CLONE_FS);
+#endif
+
 	ssleep(10);
 	
 	exit_user();
