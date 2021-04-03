@@ -1408,7 +1408,7 @@ static int ukl_create_userspace(void* arg){
 		(const char __user *const __user *)ukl_envp_init);
 }
 
-#ifdef UKL_CREATE_AFTERSPACE
+#ifdef CONFIG_UKL_CREATE_AFTERSPACE
 DECLARE_COMPLETION(ukl_done);
 static int ukl_create_afterspace(void* tmp){
 	wait_for_completion(&ukl_done);
@@ -1458,7 +1458,7 @@ static int __ref kernel_init(void *unused)
 	ukl_args.__envp = ukl_envp_init;
 	kernel_thread(ukl_create_userspace, (void *)&ukl_args, CLONE_FS);
 	
-#ifdef UKL_CREATE_AFTERSPACE
+#ifdef CONFIG_UKL_CREATE_AFTERSPACE
 	kernel_thread(ukl_create_afterspace, NULL, CLONE_FS);
 #endif
 
