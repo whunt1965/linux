@@ -624,7 +624,7 @@ SYSCALL_DEFINE0(rt_sigreturn)
 		frame = (struct rt_sigframe __user *)(regs->sp - sizeof(long));
 	} else {
 #ifdef CONFIG_UKL_USE_RET
-		frame = (struct rt_sigframe __user *)(regs->sp);
+		frame = (struct rt_sigframe __user *)(regs->sp + sizeof(long));
 #else
 		frame = (struct rt_sigframe __user *)(regs->sp - sizeof(long));
 #endif
