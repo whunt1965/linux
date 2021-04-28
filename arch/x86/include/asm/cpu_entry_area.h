@@ -11,7 +11,6 @@
 #ifdef CONFIG_X86_64
 
 /* Macro to enforce the same ordering and stack sizes */
-#ifdef CONFIG_UKL_USE_IST_PF
 #define ESTACKS_MEMBERS(guardsize, db2_holesize)\
 	char	DF_stack_guard[guardsize];	\
 	char	DF_stack[EXCEPTION_STKSZ];	\
@@ -25,29 +24,7 @@
 	char	DB_stack[EXCEPTION_STKSZ];	\
 	char	MCE_stack_guard[guardsize];	\
 	char	MCE_stack[EXCEPTION_STKSZ];	\
-	char	PF_stack_guard[guardsize];	\
-	char	PF_stack[EXCEPTION_STKSZ];	\
 	char	IST_top_guard[guardsize];	\
-
-#else
-#define ESTACKS_MEMBERS(guardsize, db2_holesize)\
-	char	DF_stack_guard[guardsize];	\
-	char	DF_stack[EXCEPTION_STKSZ];	\
-	char	NMI_stack_guard[guardsize];	\
-	char	NMI_stack[EXCEPTION_STKSZ];	\
-	char	DB2_stack_guard[guardsize];	\
-	char	DB2_stack[db2_holesize];	\
-	char	DB1_stack_guard[guardsize];	\
-	char	DB1_stack[EXCEPTION_STKSZ];	\
-	char	DB_stack_guard[guardsize];	\
-	char	DB_stack[EXCEPTION_STKSZ];	\
-	char	MCE_stack_guard[guardsize];	\
-	char	MCE_stack[EXCEPTION_STKSZ];	\
-	char	PF_stack_guard[guardsize];	\
-	char	PF_stack[EXCEPTION_STKSZ];	\
-	char	IST_top_guard[guardsize];	\
-
-#endif
 
 /* The exception stacks' physical storage. No guard pages required */
 struct exception_stacks {
@@ -69,9 +46,6 @@ enum exception_stack_ordering {
 	ESTACK_DB1,
 	ESTACK_DB,
 	ESTACK_MCE,
-#ifdef CONFIG_UKL_USE_IST_PF
-	ESTACK_PF,
-#endif
 	N_EXCEPTION_STACKS
 };
 

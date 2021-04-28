@@ -275,151 +275,6 @@ syscall_return_via_sysret:
 	USERGS_SYSRET64
 SYM_CODE_END(entry_SYSCALL_64)
 
-SYM_CODE_START(ukl_ss_u2k)
-	pushq	%rax
-	call	exit_user
-	movq	%rsp, %rax
-	addq	$0x10, %rax
-	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
-	pushq	%rax
-	subq	$0x10, %rax
-	pushq	8(%rax)
-	movq	(%rax), %rax
-	retq
-SYM_CODE_END(ukl_ss_u2k)
-
-SYM_CODE_START(ukl_ss_k2u)
-	pushq	%rax
-	movq	%rsp, %rax
-	movq	0x10(%rax), %rsp
-	pushq	8(%rax)
-	movq	(%rax), %rax
-	
-	pushq	%rax
-	call	enter_user
-	popq	%rax
-	retq
-SYM_CODE_END(ukl_ss_k2u)
-
-SYM_CODE_START(ukl_entry_SYSCALL_64)
-	/* syscalls will always come from user code so we dont need to 
-	check stack cs value. We will leave that as 0x10, because kernel 
-	entry and exit code will always run on syscall path, no need to check cs on stack */
-	UNWIND_HINT_EMPTY
-	/*
-	 * Interrupts are off on entry.
-	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,
-	 * it is too small to ever cause noticeable irq latency.
-	 */
-
-	pushq   %rax
-	call    exit_user
-	popq    %rax
-
-	/* tss.sp2 is scratch space. */
-	movq    %rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
-	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
-#ifndef CONFIG_UKL_SAME_STACK
-	movq    PER_CPU_VAR(cpu_current_top_of_stack), %rsp
-#endif
-
-	/* Construct struct pt_regs on stack */
-	pushq   $__KERNEL_DS                            /* pt_regs->ss */
-	pushq   PER_CPU_VAR(cpu_tss_rw + TSS_sp2)       /* pt_regs->sp */
-	/* pushfq has correct flags because all instructions before it dont touch the flags */
-	pushfq                                          /* pt_regs->flags */
-	pushq   $__KERNEL_CS                            /* pt_regs->cs */
-	pushq   %rcx                                      /* pt_regs->ip */
-
-	pushq   %rax                                      /* pt_regs->orig_ax */
-
-	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
-
-	/* fixing up user rip because rcx contains garbage. Thats
-	because we didnt come here through a syscall instruction, we used call */
-
-	movq    RSP(%rsp), %rdi
-	movq    (%rdi), %rsi
-	movq    %rsi, RIP(%rsp)
-#ifndef CONFIG_UKL_USE_RET
-	/* fix user stack so ret address is not the last thing on stack */
-	addq    $8, %rdi
-	movq    %rdi, RSP(%rsp)
-#else
-	subq    $8, %rdi
-        movq    EFLAGS(%rsp), %rsi /* EFLAGS in rsi */
-        movq    %rsi, (%rdi)
-        movq    %rdi, RSP(%rsp)
-	
-#endif
-
-#ifdef CONFIG_UKL_SAME_STACK
-	/* just for clone in no stack switch case
-	clone takes parent's pt_regs from tss_sp2 
-	which is a scratch space */
-	movq    %rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
-#endif
-
-	TRACE_IRQS_OFF
-
-	/* IRQs are off. */
-	movq    %rax, %rdi
-	movq    %rsp, %rsi
-	call    do_syscall_64           /* returns with IRQs disabled */
-
-	TRACE_IRQS_ON                   /* return enables interrupts */
-
-#ifndef CONFIG_UKL_SAME_STACK
-	
-	/* special signal handling case */
-	cmpq    $0xC3, CS(%rsp)
-	jne     1f
-	movq    $0x10, CS(%rsp)
-	jmp     swapgs_restore_regs_and_return_to_usermode
-1:
-	jmp     ukl_syscall_return
-
-#else
-
-	/* add return address to stack */
-#ifdef CONFIG_UKL_USE_RET
-	cmpq    $0xC3, CS(%rsp) 
-	jne	2f      
-	movq    $0x10, CS(%rsp)
-	movq	RIP(%rsp), %r15 /* return address in r15 */	
-	movq	RSP(%rsp), %r14	 /* user stack in r14 */
-	subq	$0x10, %r14
-	movq	%r15, 8(%r14)
-	movq	EFLAGS(%rsp), %r15 /* EFLAGS in r15 */	
-	movq	%r15, (%r14)
-	movq	%r14, RSP(%rsp)
-2:
-#endif
-	POP_REGS
-
-	/*
-	 * The stack is now user orig_ax, RIP, CS, EFLAGS, RSP, SS.
-	 * Save old stack pointer and switch to trampoline stack.
-	 */
-	addq    $8, %rsp
-
-	pushq   %rax
-	call    enter_user
-	popq    %rax
-
-#ifdef CONFIG_UKL_USE_RET
-	/* Swing to user stack and pop flags */
-	movq 0x18(%rsp), %rsp
-	popfq
-	retq
-#else
-	INTERRUPT_RETURN
-#endif
-
-#endif
-SYM_CODE_END(ukl_entry_SYSCALL_64)
-
-
 /*
  * %rdi: prev task
  * %rsi: next task
@@ -486,10 +341,6 @@ SYM_CODE_START(ret_from_fork)
 	UNWIND_HINT_REGS
 	movq	%rsp, %rdi
 	call	syscall_return_slowpath	/* returns with IRQs disabled */
-#ifdef CONFIG_UKL_SAME_STACK
-	movq	RSP(%rsp), %rdi
-	call	find_user_vma
-#endif
 	TRACE_IRQS_ON			/* user mode is traced as IRQS on */
 	jmp	swapgs_restore_regs_and_return_to_usermode
 
@@ -668,35 +519,12 @@ SYM_CODE_START(interrupt_entry)
 	jz	1f
 	SWAPGS
 	FENCE_SWAPGS_USER_ENTRY
-	jmp	2f
-
 	/*
 	 * Switch to the thread stack. The IRET frame and orig_ax are
 	 * on the stack, as well as the return address. RDI..R12 are
 	 * not (yet) on the stack and space has not (yet) been
 	 * allocated for them.
-	 */	
-1:
-	/* **************** */
-	/*  UKL CODE START  */
-	/* **************** */
-
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-	call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-	cmpq    $2, %rax
-	popq    %rax
-	jb      3f
-
-	movq    $0xC3, CS-ORIG_RAX+8(%rsp)
-	
-	pushq   %rax
-	call    exit_user
-	popq   %rax
-
-	/* **************** */
-	/*   UKL CODE END   */
-	/* **************** */
-2:
+	 */
 	pushq	%rdi
 
 	/* Need to switch before accessing the thread stack. */
@@ -720,10 +548,10 @@ SYM_CODE_START(interrupt_entry)
 	pushq	8(%rdi)			/* return address */
 
 	movq	(%rdi), %rdi
-	jmp	4f
-3:
+	jmp	2f
+1:
 	FENCE_SWAPGS_KERNEL_ENTRY
-4:
+2:
 	PUSH_AND_CLEAR_REGS save_ret=1
 	ENCODE_FRAME_POINTER 8
 
@@ -788,36 +616,11 @@ ret_from_intr:
 
 	/* Interrupt came from user space */
 .Lretint_user:
-	/* **************** */
-	/*  UKL CODE START  */
-	/* **************** */
-
-	cmpq    $0xC3, CS(%rsp)
-	jne	1f
-	movq    $0x10, CS(%rsp)
-1:
-	/* **************** */
-	/*   UKL CODE END   */
-	/* **************** */
-
 	mov	%rsp,%rdi
 	call	prepare_exit_to_usermode
 	TRACE_IRQS_ON
 
 SYM_INNER_LABEL(swapgs_restore_regs_and_return_to_usermode, SYM_L_GLOBAL)
-	/* add return address to stack */
-#ifdef CONFIG_UKL_USE_RET
-	cmpq	$0x33, CS(%rsp)	
-	je	ukl_syscall_return
-	movq	RIP(%rsp), %r15 /* return address in r15 */	
-	movq	RSP(%rsp), %r14	 /* user stack in r14 */
-	subq	$0x10, %r14
-	movq	%r15, 8(%r14)
-	movq	EFLAGS(%rsp), %r15 /* EFLAGS in r15 */	
-	movq	%r15, (%r14)
-	movq	%r14, RSP(%rsp)
-#endif
-ukl_syscall_return:
 #ifdef CONFIG_DEBUG_ENTRY
 	/* Assert that pt_regs indicates user mode. */
 	testb	$3, CS(%rsp)
@@ -825,7 +628,6 @@ ukl_syscall_return:
 	ud2
 1:
 #endif
-
 	POP_REGS pop_rdi=0
 
 	/*
@@ -856,31 +658,6 @@ ukl_syscall_return:
 
 	/* Restore RDI. */
 	popq	%rdi
-
-	/* **************** */
-	/*  UKL CODE START  */
-	/* **************** */
-
-	cmpq    $0x33, 8(%rsp)
-	je	1f
-
-	pushq   %rax
-	call    enter_user
-	popq    %rax
-
-#ifdef CONFIG_UKL_USE_RET
-	/* Swing to user stack and pop flags */
-	movq 0x18(%rsp), %rsp
-	popfq
-	retq
-#else
-	INTERRUPT_RETURN
-#endif
-1:
-	/* **************** */
-	/*   UKL CODE END   */
-	/* **************** */
-
 	SWAPGS
 	INTERRUPT_RETURN
 
@@ -1194,13 +971,6 @@ apicinterrupt IRQ_WORK_VECTOR			irq_work_interrupt		smp_irq_work_interrupt
 SYM_CODE_START(\sym)
 	UNWIND_HINT_IRET_REGS offset=\has_error_code*8
 
-#ifndef CONFIG_UKL_USE_IST_PF
-	.if \paranoid == 2
-	movq    $0x2, (%rsp)
-	jmp     page_fault
-	.endif
-#endif
-
 	/* Sanity check */
 	.if \shift_ist != -1 && \paranoid != 1
 	.error "using shift_ist requires paranoid=1"
@@ -1219,24 +989,7 @@ SYM_CODE_START(\sym)
 	.if \paranoid == 1
 	testb	$3, CS-ORIG_RAX(%rsp)		/* If coming from userspace, switch stacks */
 	jnz	.Lfrom_usermode_switch_stack_\@
-
-	/* **************** */
-	/*  UKL CODE START  */
-	/* **************** */
-	
-	pushq   %rax                    / * save RAX so its not overwritten when function returns * /
-	call    get_in_user             / * Get in_user value to see if we are a UKL thread or not * /
-	cmpq    $2, %rax
-	popq    %rax
-	jb      1f
-	movq	$0xC3, CS-ORIG_RAX(%rsp)
-1:
-	/* **************** */
-	/*   UKL CODE END   */
-	/* **************** */
-
 	.endif
-/*.Lfrom_ukl_kernelmode_\@:*/
 
 	.if \create_gap == 1
 	/*
@@ -1537,37 +1290,14 @@ SYM_CODE_START_LOCAL(error_entry)
 	PUSH_AND_CLEAR_REGS save_ret=1
 	ENCODE_FRAME_POINTER 8
 	testb	$3, CS+8(%rsp)
-
-	/* **************** */
-	/*  UKL CODE START  */
-	/* **************** */
-
-	jnz	1f /* user threads */
-	
-	pushq   %rax                    /* save RAX so its not overwritten when function returns */
-	call    get_in_user             /* Get in_user value to see if we are a UKL thread or not */
-	cmpq    $2, %rax
-	popq    %rax
-	jb	.Lerror_kernelspace
-
-	movq    $0xC3, CS+8(%rsp)
-	pushq   %rax
-	call    exit_user
-	popq   %rax
-	jmp	2f
-
-	/* **************** */
-	/*   UKL CODE END   */
-	/* **************** */
+	jz	.Lerror_kernelspace
 
 	/*
 	 * We entered from user mode or we're pretending to have entered
 	 * from user mode due to an IRET fault.
 	 */
-1:
 	SWAPGS
 	FENCE_SWAPGS_USER_ENTRY
-2:
 	/* We have user CR3.  Change to kernel CR3. */
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
 
@@ -1607,8 +1337,6 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * gsbase and proceed.  We'll fix up the exception and land in
 	 * .Lgs_change's error handler with kernel gsbase.
 	 */
-1:
-	jmp 1b
 	SWAPGS
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
@@ -1624,8 +1352,6 @@ SYM_CODE_START_LOCAL(error_entry)
 	 * We came from an IRET to user mode, so we have user
 	 * gsbase and CR3.  Switch to kernel gsbase and CR3:
 	 */
-1:
-	jmp 1b
 	SWAPGS
 	FENCE_SWAPGS_USER_ENTRY
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax
@@ -1716,8 +1442,7 @@ SYM_CODE_START(nmi)
 	 * We also must not push anything to the stack before switching
 	 * stacks lest we corrupt the "NMI executing" variable.
 	 */
-1:
-	jmp 1b
+
 	swapgs
 	cld
 	FENCE_SWAPGS_USER_ENTRY
@@ -1964,8 +1689,6 @@ end_repeat_nmi:
 	testl	%ebx, %ebx			/* swapgs needed? */
 	jnz	nmi_restore
 nmi_swapgs:
-1:
-	jmp 1b
 	SWAPGS_UNSAFE_STACK
 nmi_restore:
 	POP_REGS

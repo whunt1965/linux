@@ -6,7 +6,6 @@
  * ELF register definitions..
  */
 #include <linux/thread_info.h>
-#include <linux/sched.h>
 
 #include <asm/ptrace.h>
 #include <asm/user.h>
@@ -178,12 +177,9 @@ static inline void elf_common_init(struct thread_struct *t,
 	regs->si = regs->di = regs->bp = 0;
 	regs->r8 = regs->r9 = regs->r10 = regs->r11 = 0;
 	regs->r12 = regs->r13 = regs->r14 = regs->r15 = 0;
-	
-	if (get_in_user() == 0){
-		t->fsbase = t->gsbase = 0;
-		t->fsindex = t->gsindex = 0;
-		t->ds = t->es = ds;
-	}
+	t->fsbase = t->gsbase = 0;
+	t->fsindex = t->gsindex = 0;
+	t->ds = t->es = ds;
 }
 
 #define ELF_PLAT_INIT(_r, load_addr)			\

@@ -97,12 +97,6 @@ For 32-bit we have the following conventions - kernel is built with
 
 #define SIZEOF_PTREGS	21*8
 
-/*
- * 0 = Non UKL thread
- * 1 = UKL thread - in user code
- * 2 = UKL thread - in kernel code
- */
-
 .macro PUSH_AND_CLEAR_REGS rdx=%rdx rax=%rax save_ret=0
 	.if \save_ret
 	pushq	%rsi		/* pt_regs->si */

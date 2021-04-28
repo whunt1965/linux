@@ -134,18 +134,6 @@ static long syscall_trace_enter(struct pt_regs *regs)
 	(_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_UPROBE |	\
 	 _TIF_NEED_RESCHED | _TIF_USER_RETURN_NOTIFY | _TIF_PATCH_PENDING)
 
-#ifdef CONFIG_UKL_SAME_STACK
-void ukl_handle_signals(void){
-	struct ksignal ksig;
-	void (*ukl_handler)(int,...);
-	
-	while (get_signal(&ksig)) {
-		ukl_handler = (void*) ksig.ka.sa.sa_handler;
-		ukl_handler(ksig.sig, &ksig.info, &ksig.ka.sa.sa_restorer);
-	}
-}
-#endif
-
 static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 {
 	/*
@@ -169,18 +157,8 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
 			klp_update_patch_state(current);
 
 		/* deal with pending signal delivery */
-#ifdef CONFIG_UKL_SAME_STACK
-		if (cached_flags & _TIF_SIGPENDING){
-			if (get_in_user() > 0){
-				ukl_handle_signals();
-			} else {
-				do_signal(regs);
-			}
-		}
-#else
 		if (cached_flags & _TIF_SIGPENDING)
 			do_signal(regs);
-#endif
 
 		if (cached_flags & _TIF_NOTIFY_RESUME) {
 			clear_thread_flag(TIF_NOTIFY_RESUME);
@@ -300,25 +278,6 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
 	local_irq_disable();
 	prepare_exit_to_usermode(regs);
 }
-/*
-inline int get_in_user (void) __attribute__((always_inline));
-inline void enter_user (void) __attribute__((always_inline));
-inline void exit_user (void) __attribute__((always_inline));
-*/
-inline int get_in_user (void){
-	/*
-	 * 0 = Non UKL thread
-	 * 1 = UKL thread - in kernel code
-	 * 2 = UKL thread - in user code
-	 */
-	return current->in_user;
-}
-inline void enter_user (void){
-	current->in_user = 2;
-}
-inline void exit_user (void){
-	current->in_user = 1;
-}
 
 #ifdef CONFIG_X86_64
 __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
@@ -344,56 +303,6 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 	}
 
 	syscall_return_slowpath(regs);
-}
-#endif
-
-void ukl_set_bypass_syscall(int val){
-	current->ukl_bypass_syscall = val;
-	if (current->ukl_bypass_limit == 0)
-		current->ukl_bypass_limit = 1000;
-}
-
-int ukl_get_bypass_syscall(void){
-	struct thread_info *ti;
-	int ret = current->ukl_bypass_syscall;
-	
-	if (ret == 0)
-	        return ret;
-	
-	ti = current_thread_info();
-	if (READ_ONCE(ti->flags) & _TIF_SIGPENDING)
-	        return 0;
-
-	current->ukl_bypass_current++;
-	if (current->ukl_bypass_current >= current->ukl_bypass_limit){
-	        current->ukl_bypass_current = 0;
-	        ret = 0;
-	}
-
-	return ret;
-}
-
-#ifdef CONFIG_UKL_SAME_STACK
-void find_user_vma(unsigned long addr){
-	struct vm_area_struct *usv;
-	struct task_struct *tsk;
-	struct mm_struct *mm;
-	
-	tsk = current;
-	mm = tsk->mm;
-
-	if (unlikely(!down_read_trylock(&mm->mmap_sem))) {
-		down_read(&mm->mmap_sem);
-	}
-
-	usv = find_vma(mm, addr);
-
-	up_read(&mm->mmap_sem);
-
-	if(usv == NULL){
-		printk("Error: Could not find user stack vma!");
-	}
-	tsk->user_stack_vma = usv;
 }
 #endif
 

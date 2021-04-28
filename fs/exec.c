@@ -359,12 +359,7 @@ static int bprm_mm_init(struct linux_binprm *bprm)
 	int err;
 	struct mm_struct *mm = NULL;
 
-	if(get_in_user() > 0){
-		bprm->mm = mm = &init_mm;
-        } else {
-		bprm->mm = mm = mm_alloc();
-        }
-
+	bprm->mm = mm = mm_alloc();
 	err = -ENOMEM;
 	if (!mm)
 		goto err;
@@ -1321,9 +1316,8 @@ int flush_old_exec(struct linux_binprm * bprm)
 	 * to be lockless.
 	 */
 	set_mm_exe_file(bprm->mm, bprm->file);
-	
-	if(bprm->file)
-		would_dump(bprm, bprm->file);
+
+	would_dump(bprm, bprm->file);
 
 	/*
 	 * Release all of the old mmap stuff
@@ -1702,61 +1696,56 @@ EXPORT_SYMBOL(remove_arg_zero);
  */
 int search_binary_handler(struct linux_binprm *bprm)
 {
-	if(get_in_user() == 0){
-		bool need_retry = IS_ENABLED(CONFIG_MODULES);
-		struct linux_binfmt *fmt;
-		int retval;
-	
-		/* This allows 4 levels of binfmt rewrites before failing hard. */
-		if (bprm->recursion_depth > 5)
-			return -ELOOP;
-	
-		retval = security_bprm_check(bprm);
-		if (retval)
-			return retval;
-	
-		retval = -ENOENT;
-	 retry:
-		read_lock(&binfmt_lock);
-		list_for_each_entry(fmt, &formats, lh) {
-			if (!try_module_get(fmt->module))
-				continue;
-			read_unlock(&binfmt_lock);
-	
-			bprm->recursion_depth++;
-			retval = fmt->load_binary(bprm);
-			bprm->recursion_depth--;
-	
-			read_lock(&binfmt_lock);
-			put_binfmt(fmt);
-			if (retval < 0 && bprm->called_exec_mmap) {
-				/* we got to flush_old_exec() and failed after it */
-				read_unlock(&binfmt_lock);
-				force_sigsegv(SIGSEGV);
-				return retval;
-			}
-			if (retval != -ENOEXEC || !bprm->file) {
-				read_unlock(&binfmt_lock);
-				return retval;
-			}
-		}
-		read_unlock(&binfmt_lock);
-	
-		if (need_retry) {
-			if (printable(bprm->buf[0]) && printable(bprm->buf[1]) &&
-			    printable(bprm->buf[2]) && printable(bprm->buf[3]))
-				return retval;
-			if (request_module("binfmt-%04x", *(ushort *)(bprm->buf + 2)) < 0)
-				return retval;
-			need_retry = false;
-			goto retry;
-		}
-	
+	bool need_retry = IS_ENABLED(CONFIG_MODULES);
+	struct linux_binfmt *fmt;
+	int retval;
+
+	/* This allows 4 levels of binfmt rewrites before failing hard. */
+	if (bprm->recursion_depth > 5)
+		return -ELOOP;
+
+	retval = security_bprm_check(bprm);
+	if (retval)
 		return retval;
-	} else {
-		extern int load_elf_binary(struct linux_binprm *bprm);
-		return load_elf_binary(bprm);
+
+	retval = -ENOENT;
+ retry:
+	read_lock(&binfmt_lock);
+	list_for_each_entry(fmt, &formats, lh) {
+		if (!try_module_get(fmt->module))
+			continue;
+		read_unlock(&binfmt_lock);
+
+		bprm->recursion_depth++;
+		retval = fmt->load_binary(bprm);
+		bprm->recursion_depth--;
+
+		read_lock(&binfmt_lock);
+		put_binfmt(fmt);
+		if (retval < 0 && bprm->called_exec_mmap) {
+			/* we got to flush_old_exec() and failed after it */
+			read_unlock(&binfmt_lock);
+			force_sigsegv(SIGSEGV);
+			return retval;
+		}
+		if (retval != -ENOEXEC || !bprm->file) {
+			read_unlock(&binfmt_lock);
+			return retval;
+		}
 	}
+	read_unlock(&binfmt_lock);
+
+	if (need_retry) {
+		if (printable(bprm->buf[0]) && printable(bprm->buf[1]) &&
+		    printable(bprm->buf[2]) && printable(bprm->buf[3]))
+			return retval;
+		if (request_module("binfmt-%04x", *(ushort *)(bprm->buf + 2)) < 0)
+			return retval;
+		need_retry = false;
+		goto retry;
+	}
+
+	return retval;
 }
 EXPORT_SYMBOL(search_binary_handler);
 
@@ -1830,44 +1819,37 @@ static int __do_execve_file(int fd, struct filename *filename,
 	check_unsafe_exec(bprm);
 	current->in_execve = 1;
 
-	if(get_in_user() == 0){
-		if (!file)
-			file = do_open_execat(fd, filename, flags);
-		retval = PTR_ERR(file);
-		if (IS_ERR(file))
-			goto out_unmark;
-	}
+	if (!file)
+		file = do_open_execat(fd, filename, flags);
+	retval = PTR_ERR(file);
+	if (IS_ERR(file))
+		goto out_unmark;
 
 	sched_exec();
 
 	bprm->file = file;
-	
-	if(get_in_user() == 0){
-		if (!filename) {
-			bprm->filename = "none";
-		} else if (fd == AT_FDCWD || filename->name[0] == '/') {
-			bprm->filename = filename->name;
-		} else {
-			if (filename->name[0] == '\0')
-				pathbuf = kasprintf(GFP_KERNEL, "/dev/fd/%d", fd);
-			else
-				pathbuf = kasprintf(GFP_KERNEL, "/dev/fd/%d/%s",
-						    fd, filename->name);
-			if (!pathbuf) {
-				retval = -ENOMEM;
-				goto out_unmark;
-			}
-			/*
-			 * Record that a name derived from an O_CLOEXEC fd will be
-			 * inaccessible after exec. Relies on having exclusive access to
-			 * current->files (due to unshare_files above).
-			 */
-			if (close_on_exec(fd, rcu_dereference_raw(current->files->fdt)))
-				bprm->interp_flags |= BINPRM_FLAGS_PATH_INACCESSIBLE;
-			bprm->filename = pathbuf;
-		}
+	if (!filename) {
+		bprm->filename = "none";
+	} else if (fd == AT_FDCWD || filename->name[0] == '/') {
+		bprm->filename = filename->name;
 	} else {
-		bprm->filename = "UKL";
+		if (filename->name[0] == '\0')
+			pathbuf = kasprintf(GFP_KERNEL, "/dev/fd/%d", fd);
+		else
+			pathbuf = kasprintf(GFP_KERNEL, "/dev/fd/%d/%s",
+					    fd, filename->name);
+		if (!pathbuf) {
+			retval = -ENOMEM;
+			goto out_unmark;
+		}
+		/*
+		 * Record that a name derived from an O_CLOEXEC fd will be
+		 * inaccessible after exec. Relies on having exclusive access to
+		 * current->files (due to unshare_files above).
+		 */
+		if (close_on_exec(fd, rcu_dereference_raw(current->files->fdt)))
+			bprm->interp_flags |= BINPRM_FLAGS_PATH_INACCESSIBLE;
+		bprm->filename = pathbuf;
 	}
 	bprm->interp = bprm->filename;
 
@@ -1878,11 +1860,10 @@ static int __do_execve_file(int fd, struct filename *filename,
 	retval = prepare_arg_pages(bprm, argv, envp);
 	if (retval < 0)
 		goto out;
-	if (get_in_user() == 0) {
-		retval = prepare_binprm(bprm);
-		if (retval < 0)
-			goto out;
-	}
+
+	retval = prepare_binprm(bprm);
+	if (retval < 0)
+		goto out;
 
 	retval = copy_strings_kernel(1, &bprm->filename, bprm);
 	if (retval < 0)

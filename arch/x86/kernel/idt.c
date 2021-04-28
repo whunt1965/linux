@@ -188,10 +188,6 @@ static const __initconst struct idt_data ist_idts[] = {
 #ifdef CONFIG_X86_MCE
 	ISTG(X86_TRAP_MC,	&machine_check,	IST_INDEX_MCE),
 #endif
-#ifdef CONFIG_UKL_USE_IST_PF
-	ISTG(X86_TRAP_PF,       page_fault,          IST_INDEX_PF),
-#endif
-
 };
 
 /*
@@ -260,7 +256,6 @@ void __init idt_setup_early_traps(void)
 			     true);
 	load_idt(&idt_descr);
 }
-
 
 /**
  * idt_setup_traps - Initialize the idt table with default traps

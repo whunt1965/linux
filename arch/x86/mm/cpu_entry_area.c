@@ -110,9 +110,6 @@ static void __init percpu_setup_exception_stacks(unsigned int cpu)
 	cea_map_stack(DB1);
 	cea_map_stack(DB);
 	cea_map_stack(MCE);
-#ifdef CONFIG_UKL_USE_IST_PF
-	cea_map_stack(PF);
-#endif
 }
 #else
 static inline void percpu_setup_exception_stacks(unsigned int cpu)
