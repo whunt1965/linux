@@ -629,6 +629,10 @@ struct wake_q_node {
 	struct wake_q_node *next;
 };
 
+inline int get_in_user (void);
+inline void enter_user (void);
+inline void exit_user (void);
+
 struct task_struct {
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	/*
@@ -1289,6 +1293,15 @@ struct task_struct {
 	unsigned long			prev_lowest_stack;
 #endif
 
+#ifdef CONFIG_UNIKERNEL_LINUX
+	int				in_user;
+	int				ukl_bypass_syscall;
+	int				ukl_bypass_limit;
+	int				ukl_bypass_current;
+#ifdef CONFIG_UKL_SAME_STACK
+	struct vm_area_struct		*user_stack_vma;
+#endif
+#endif
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
