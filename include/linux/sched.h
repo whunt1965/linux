@@ -651,6 +651,16 @@ struct task_struct {
 	randomized_struct_fields_start
 
 	void				*stack;
+#ifdef CONFIG_UNIKERNEL_LINUX
+	int				in_user;
+#ifdef CONFIG_UKL_SAME_STACK
+	struct vm_area_struct		*user_stack_vma;
+#endif
+	int				ukl_bypass_syscall;
+	int				ukl_bypass_limit;
+	int				ukl_bypass_current;
+#endif
+
 	refcount_t			usage;
 	/* Per task flags (PF_*), defined further below: */
 	unsigned int			flags;
@@ -1293,15 +1303,6 @@ struct task_struct {
 	unsigned long			prev_lowest_stack;
 #endif
 
-#ifdef CONFIG_UNIKERNEL_LINUX
-	int				in_user;
-	int				ukl_bypass_syscall;
-	int				ukl_bypass_limit;
-	int				ukl_bypass_current;
-#ifdef CONFIG_UKL_SAME_STACK
-	struct vm_area_struct		*user_stack_vma;
-#endif
-#endif
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
