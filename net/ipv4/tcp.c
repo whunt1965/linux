@@ -1436,7 +1436,6 @@ EXPORT_SYMBOL_GPL(tcp_sendmsg_locked);
 int tcp_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
 {
 	int ret;
-
 	lock_sock(sk);
 	ret = tcp_sendmsg_locked(sk, msg, size);
 	release_sock(sk);
@@ -1444,6 +1443,80 @@ int tcp_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	return ret;
 }
 EXPORT_SYMBOL(tcp_sendmsg);
+
+static inline loff_t *file_ppos(struct file *file)
+{
+	return file->f_mode & FMODE_STREAM ? NULL : &file->f_pos;
+}
+
+int one_time_work_done  = 0;
+/* struct kiocb global_kiocb; */
+struct msghdr global_msg;
+struct sock *global_sk = NULL;
+
+int shortcut_tcp_sendmsg(int fd, struct iovec* iov)
+{
+	int ret;
+
+  struct fd f;
+  struct socket *socket;
+  struct sock *sk;
+	struct iov_iter iter;
+  struct kiocb kiocb;
+  loff_t pos, *ppos;
+
+
+  // Need iter to put into msg
+  // TODO: doesn't this change, so needs to be done every time?
+  iov_iter_init(&iter, WRITE, iov, 1, iov->iov_len);
+
+  // First time we have to do some setup.
+  if (one_time_work_done == 0){
+
+    // Get fd struct
+    f = fdget_pos(fd);
+    // Check file pointer
+    if(f.file == 0){
+      printk("Error, file is zero\n");
+    }
+
+    ppos = file_ppos(f.file);
+    if (ppos) {
+      pos = *ppos;
+      ppos = &pos;
+    }
+
+    // Get socket ptr
+    socket = (struct socket *) f.file->private_data;
+
+    // Copy sk to global var
+    global_sk = socket->sk;
+
+
+    // This is always 0
+    init_sync_kiocb(&kiocb, f.file);
+
+    kiocb.ki_pos = (ppos ? *ppos : 0);
+
+    // Copy msg struct to global
+    global_msg.msg_iocb = &kiocb;
+
+    one_time_work_done = 1;
+  }
+
+  sk = global_sk;
+
+
+  global_msg.msg_iter = iter;
+  struct msghdr msg = global_msg;
+
+	lock_sock(sk);
+	ret = tcp_sendmsg_locked(sk, &msg, iov->iov_len);
+	release_sock(sk);
+
+	return ret;
+}
+EXPORT_SYMBOL(shortcut_tcp_sendmsg);
 
 /*
  *	Handle reading urgent data. BSD has very simple semantics for
