@@ -681,9 +681,6 @@ out:
  * These are the functions used to load ELF style executables and shared
  * libraries.  There is no binary dependent code anywhere else.
  */
-static void ukl__start (void){
-	printk("Dummy UKL function\n");
-}
 
 static int load_elf_binary(struct linux_binprm *bprm)
 {
@@ -1163,7 +1160,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
 	if(get_in_user() == 0){
 		start_thread(regs, elf_entry, bprm->p);
 	} else {
-		//extern void ukl__start (void);
+		extern void ukl__start (void);
 		start_thread(regs, (unsigned long) ukl__start, bprm->p);
 	}
 	retval = 0;

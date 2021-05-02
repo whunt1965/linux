@@ -164,7 +164,6 @@ SECTIONS
         .tdata : ALIGN(0x200000){ 
                 __tls_data_start = .;
                 *(.tdata .tdata.* .gnu.linkonce.td.*)
-		. = __tls_data_start + 0x100;
                 __tls_data_end = .;
         } :tls    
         .tbss : {  
