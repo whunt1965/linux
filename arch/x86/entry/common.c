@@ -207,8 +207,10 @@ __visible inline void prepare_exit_to_usermode(struct pt_regs *regs)
 {
 	struct thread_info *ti = current_thread_info();
 	u32 cached_flags;
-
-	addr_limit_user_check();
+	
+	if(get_in_user() == 0) {
+		addr_limit_user_check();
+	}
 
 	lockdep_assert_irqs_disabled();
 	lockdep_sys_exit();
