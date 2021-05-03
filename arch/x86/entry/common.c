@@ -207,6 +207,10 @@ __visible inline void prepare_exit_to_usermode(struct pt_regs *regs)
 {
 	struct thread_info *ti = current_thread_info();
 	u32 cached_flags;
+
+	if(current->ukl_bypass_syscall == 1){
+		return;
+	}
 	
 	if(get_in_user() == 0) {
 		addr_limit_user_check();
@@ -353,7 +357,7 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 void ukl_set_bypass_syscall(int val){
 	current->ukl_bypass_syscall = val;
 	if (current->ukl_bypass_limit == 0)
-		current->ukl_bypass_limit = 1000;
+		current->ukl_bypass_limit = 50;
 }
 
 int ukl_get_bypass_syscall(void){

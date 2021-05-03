@@ -537,10 +537,11 @@ static void flush_tlb_func_common(const struct flush_tlb_info *f,
 
 	/* This code cannot presently handle being reentered. */
 	VM_WARN_ON(!irqs_disabled());
-	/*
-	if (unlikely(loaded_mm == &init_mm))
-		return;
-	*/
+	if(get_in_user() == 0){
+		if (unlikely(loaded_mm == &init_mm)){
+			return;
+		}
+	}
 	VM_WARN_ON(this_cpu_read(cpu_tlbstate.ctxs[loaded_mm_asid].ctx_id) !=
 		   loaded_mm->context.ctx_id);
 
