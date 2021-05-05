@@ -356,12 +356,15 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 
 void ukl_set_bypass_limit(int val){
 	current->ukl_bypass_limit = val;
+	printk("Setting bypass limit to %d\n", val);
 }
 
 void ukl_set_bypass_syscall(int val){
 	current->ukl_bypass_syscall = val;
-	if (current->ukl_bypass_limit == 0)
+	if (current->ukl_bypass_limit == 0){
 		current->ukl_bypass_limit = 50;
+		printk("Setting bypass limit to 50 (DEFAULT)\n");
+	}
 }
 
 int ukl_get_bypass_syscall(void){
