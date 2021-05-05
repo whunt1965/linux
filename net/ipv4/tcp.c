@@ -1475,17 +1475,51 @@ EXPORT_SYMBOL(shortcut_purge_cache_entry);
 #endif
 
 int one_time_work_done  = 0;
-/* struct kiocb global_kiocb; */
+struct kiocb global_kiocb;
 struct msghdr global_msg;
 struct sock *global_sk = NULL;
 
 /* struct sock *sock_array[200] = NULL; */
+
+struct sock *shortcut_fd_to_sock(struct fd *f){
+  //struct fd f;
+  struct socket *socket;
+
+  // Get fd struct
+  // Check file pointer
+  if(f->file == 0){
+    // // printk("Error, file is zero\n");
+  }
+  // Get socket ptr
+  socket = (struct socket *) f->file->private_data;
+
+  // Copy sk to global var
+  // TODO: roundabout
+  return socket->sk;
+
+}
+
+void shortcut_get_kiocb( struct fd *f, struct kiocb *kiocb){
+  //struct fd f;
+  loff_t pos, *ppos;
+
+  //f = fdget_pos(fd);
+  init_sync_kiocb(kiocb, f->file);
+
+  ppos = file_ppos(f->file);
+  if (ppos) {
+    pos = *ppos;
+    ppos = &pos;
+  }
+  kiocb->ki_pos = (ppos ? *ppos : 0);
+}
 
 int shortcut_tcp_sendmsg(int fd, struct iovec* iov)
 {
 	int ret;
 
   struct fd f;
+
   struct socket *socket;
   struct sock *sk;
 	struct iov_iter iter;
@@ -1518,21 +1552,24 @@ int shortcut_tcp_sendmsg(int fd, struct iovec* iov)
   if(f.file == 0){
     // printk("Error, file is zero\n");
   }
+    sk = shortcut_fd_to_sock(&f);
 
   ppos = file_ppos(f.file);
   if (ppos) {
     pos = *ppos;
     ppos = &pos;
   }
-
+  /* struct msghdr msg; // = global_msg; */
+#if 1
   // Get socket ptr
-  socket = (struct socket *) f.file->private_data;
+   /* socket = (struct socket *) f.file->private_data; */
 
   // Copy sk to global var
   // TODO: roundabout
-  global_sk = socket->sk;
+   /* global_sk = socket->sk; */
 
-  if (one_time_work_done == 0){
+  /* if (one_time_work_done == 0){ */
+    if (1){
 
       // This is always 0
 
@@ -1546,17 +1583,29 @@ int shortcut_tcp_sendmsg(int fd, struct iovec* iov)
       one_time_work_done = 1;
     }
 
-    sk = global_sk;
+    /* sk = global_sk; */
 
   global_msg.msg_iter = iter;
-  struct msghdr msg = global_msg;
+#endif
+
+//sk
+//msg
+
+  /* sk = shortcut_fd_to_sock(&f); */
+  /* msg has a msg_iter and kiocb ptr and msg_iter has a iovec ptr */
+  /* shortcut_get_kiocb(&f, &kiocb); */
+
+
+
+  /* msg.msg_iocb = &kiocb; */
+  /* msg.msg_iter = iter; */
 
 	lock_sock(sk);
 
   // printk("%s: sk: %px, msg %px, iov.iov_len %ld \n",
          /* __func__, sk, &msg, iov->iov_len); */
 
-	ret = tcp_sendmsg_locked(sk, &msg, iov->iov_len);
+	ret = tcp_sendmsg_locked(sk, &global_msg, iov->iov_len);
 	release_sock(sk);
 
   // printk("%s: ret: %d \n", __func__, ret);
@@ -2447,38 +2496,6 @@ recv_sndq:
 }
 EXPORT_SYMBOL(tcp_recvmsg);
 
-struct sock *shortcut_fd_to_sock(struct fd *f){
-  //struct fd f;
-  struct socket *socket;
-
-  // Get fd struct
-  // Check file pointer
-  if(f->file == 0){
-    // // printk("Error, file is zero\n");
-  }
-  // Get socket ptr
-  socket = (struct socket *) f->file->private_data;
-
-  // Copy sk to global var
-  // TODO: roundabout
-  return socket->sk;
-
-}
-
-void shortcut_get_kiocb( struct fd *f, struct kiocb *kiocb){
-  //struct fd f;
-  loff_t pos, *ppos;
-
-  //f = fdget_pos(fd);
-  init_sync_kiocb(kiocb, f->file);
-
-  ppos = file_ppos(f->file);
-  if (ppos) {
-    pos = *ppos;
-    ppos = &pos;
-  }
-  kiocb->ki_pos = (ppos ? *ppos : 0);
-}
 
 int shortcut_tcp_recvmsg(int fd, struct iovec *iov){
   //  struct sock *sk,
