@@ -1453,7 +1453,7 @@ static inline loff_t *file_ppos(struct file *file)
 	return file->f_mode & FMODE_STREAM ? NULL : &file->f_pos;
 }
 
-
+#if 0
 #define SZ_CACHE 200
 
 struct sock *my_sock_cache[SZ_CACHE];
@@ -1471,6 +1471,8 @@ void shortcut_purge_cache_entry(int fd){
 }
 
 EXPORT_SYMBOL(shortcut_purge_cache_entry);
+
+#endif
 
 int one_time_work_done  = 0;
 /* struct kiocb global_kiocb; */
@@ -1563,6 +1565,9 @@ int shortcut_tcp_sendmsg(int fd, struct iovec* iov)
 }
 EXPORT_SYMBOL(shortcut_tcp_sendmsg);
 
+struct msghdr msg;
+struct msghdr msg_struct;
+#if 0
 int shortcut_tcp_sendmsg_cached(int fd, struct iovec* iov)
 {
 	int ret;
@@ -1645,7 +1650,7 @@ int shortcut_tcp_sendmsg_cached(int fd, struct iovec* iov)
     panic("We truly believe this is impossible\n");
   }
 
-  struct msghdr msg;
+  //struct msghdr msg;
   msg.msg_iter = iter;
   msg.msg_iocb = &my_kiocb_cache[fd].kiocb_;
 
@@ -1654,11 +1659,7 @@ int shortcut_tcp_sendmsg_cached(int fd, struct iovec* iov)
   // // printk("%s: sk: %px, msg %px, iov.iov_len %ld \n",
          /* __func__, sk, &msg, iov->iov_len); */
 
-  printk("msg is %px\n", &msg);
-
-  if(&msg == NULL){
-    panic("msg is null\n");
-  }
+  //printk("msg is %px\n", &msg);
 
 	ret = tcp_sendmsg_locked(sk, &msg, iov->iov_len);
 	release_sock(sk);
@@ -1668,6 +1669,7 @@ int shortcut_tcp_sendmsg_cached(int fd, struct iovec* iov)
 	return ret;
 }
 EXPORT_SYMBOL(shortcut_tcp_sendmsg_cached);
+#endif
 /*
  *	Handle reading urgent data. BSD has very simple semantics for
  *	this, no blocking and very strange errors 8)
@@ -2445,18 +2447,17 @@ recv_sndq:
 }
 EXPORT_SYMBOL(tcp_recvmsg);
 
-struct sock *shortcut_fd_to_sock(int fd){
-  struct fd f;
+struct sock *shortcut_fd_to_sock(struct fd *f){
+  //struct fd f;
   struct socket *socket;
 
   // Get fd struct
-  f = fdget_pos(fd);
   // Check file pointer
-  if(f.file == 0){
+  if(f->file == 0){
     // // printk("Error, file is zero\n");
   }
   // Get socket ptr
-  socket = (struct socket *) f.file->private_data;
+  socket = (struct socket *) f->file->private_data;
 
   // Copy sk to global var
   // TODO: roundabout
@@ -2464,14 +2465,14 @@ struct sock *shortcut_fd_to_sock(int fd){
 
 }
 
-void shortcut_get_kiocb(int fd, struct kiocb *kiocb){
-  struct fd f;
+void shortcut_get_kiocb( struct fd *f, struct kiocb *kiocb){
+  //struct fd f;
   loff_t pos, *ppos;
 
-  f = fdget_pos(fd);
-  init_sync_kiocb(kiocb, f.file);
+  //f = fdget_pos(fd);
+  init_sync_kiocb(kiocb, f->file);
 
-  ppos = file_ppos(f.file);
+  ppos = file_ppos(f->file);
   if (ppos) {
     pos = *ppos;
     ppos = &pos;
@@ -2482,15 +2483,19 @@ void shortcut_get_kiocb(int fd, struct kiocb *kiocb){
 int shortcut_tcp_recvmsg(int fd, struct iovec *iov){
   //  struct sock *sk,
   // struct msghdr *msg, size_t len, int nonblock, int flags, int *addr_len)
+
+  struct fd f;
+  f = fdget_pos(fd);
+
   struct sock* sk;
-  sk = shortcut_fd_to_sock(fd);
+  sk = shortcut_fd_to_sock(&f);
   /* msg has a msg_iter and kiocb ptr and msg_iter has a iovec ptr */
 
 	struct iov_iter iter;
   iov_iter_init(&iter, WRITE, iov, 1, iov->iov_len);
 
   struct kiocb kiocb;
-  shortcut_get_kiocb(fd, &kiocb);
+  shortcut_get_kiocb(&f, &kiocb);
 
   struct msghdr msg_struct;
   msg_struct.msg_iocb = &kiocb;
@@ -2772,6 +2777,7 @@ recv_sndq:
 }
 EXPORT_SYMBOL(shortcut_tcp_recvmsg);
 
+#if 0
 int my_cache_zeroed = 0;
 
 int shortcut_tcp_recvmsg_cached(int fd, struct iovec *iov){
@@ -2807,7 +2813,7 @@ int shortcut_tcp_recvmsg_cached(int fd, struct iovec *iov){
 	struct iov_iter iter;
   iov_iter_init(&iter, READ, iov, 1, iov->iov_len);
 
-  struct msghdr msg_struct;
+  //struct msghdr msg_struct;
   msg_struct.msg_iocb = &my_kiocb_cache[fd].kiocb_;
   msg_struct.msg_iter = iter;
 
@@ -3086,6 +3092,7 @@ recv_sndq:
 	goto out;
 }
 EXPORT_SYMBOL(shortcut_tcp_recvmsg_cached);
+#endif
 
 void tcp_set_state(struct sock *sk, int state)
 {
