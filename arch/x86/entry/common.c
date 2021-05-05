@@ -354,6 +354,10 @@ __visible void do_syscall_64(unsigned long nr, struct pt_regs *regs)
 }
 #endif
 
+void ukl_set_bypass_limit(int val){
+	current->ukl_bypass_limit = val;
+}
+
 void ukl_set_bypass_syscall(int val){
 	current->ukl_bypass_syscall = val;
 	if (current->ukl_bypass_limit == 0)
@@ -378,6 +382,10 @@ int ukl_get_bypass_syscall(void){
 	}
 
 	return ret;
+}
+
+void ukl_increment_bypass_syscall(void){
+	current->ukl_bypass_current++;
 }
 
 #ifdef CONFIG_UKL_SAME_STACK
