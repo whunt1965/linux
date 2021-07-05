@@ -75,6 +75,7 @@ modpost_link()
 
 	objects="--whole-archive				\
 		${KBUILD_VMLINUX_OBJS}				\
+		../UKL.a                                        \
 		--no-whole-archive				\
 		--start-group					\
 		${KBUILD_VMLINUX_LIBS}				\
@@ -96,7 +97,7 @@ modpost_link()
 		info LD ${1}
 	fi
 
-	${LD} ${KBUILD_LDFLAGS} -r -o ${1} ${lds} ${objects}
+	${LD} ${KBUILD_LDFLAGS} --unresolved-symbols=ignore-all --allow-multiple-definition -r -o ${1} ${lds} ${objects}
 }
 
 objtool_link()
@@ -180,6 +181,7 @@ vmlinux_link()
 		else
 			objects="--whole-archive		\
 				${KBUILD_VMLINUX_OBJS}		\
+				../UKL.a                        \
 				--no-whole-archive		\
 				--start-group			\
 				${KBUILD_VMLINUX_LIBS}		\
@@ -187,7 +189,9 @@ vmlinux_link()
 				${@}"
 		fi
 
-		${LD} ${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}	\
+		${LD} --unresolved-symbols=ignore-all           \
+                        --allow-multiple-definition             \
+			${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}	\
 			${strip_debug#-Wl,}			\
 			-o ${output}				\
 			${map_option}				\
@@ -310,16 +314,16 @@ sorttable()
 # Delete output files in case of error
 cleanup()
 {
-	rm -f .btf.*
+#	rm -f .btf.*
 	rm -f .tmp_System.map
-	rm -f .tmp_initcalls.lds
-	rm -f .tmp_symversions.lds
-	rm -f .tmp_vmlinux*
-	rm -f System.map
-	rm -f vmlinux
-	rm -f vmlinux.map
-	rm -f vmlinux.o
-	rm -f .vmlinux.d
+#	rm -f .tmp_initcalls.lds
+#	rm -f .tmp_symversions.lds
+#	rm -f .tmp_vmlinux*
+#	rm -f System.map
+#	rm -f vmlinux
+#	rm -f vmlinux.map
+#	rm -f vmlinux.o
+#	rm -f .vmlinux.d
 }
 
 # Use "make V=1" to debug this script
