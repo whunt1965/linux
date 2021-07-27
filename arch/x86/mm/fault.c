@@ -1329,7 +1329,7 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 2. The access did not originate in userspace.
 	 */
 	if (unlikely(!mmap_read_trylock(mm))) {
-		if (!user_mode(regs) && !search_exception_tables(regs->ip)) {
+		if (get_in_user() == 0 && !user_mode(regs) && !search_exception_tables(regs->ip)) {
 			/*
 			 * Fault from code in kernel from
 			 * which we do not expect faults.

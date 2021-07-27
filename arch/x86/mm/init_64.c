@@ -1372,9 +1372,17 @@ void mark_rodata_ro(void)
 {
 	unsigned long start = PFN_ALIGN(_text);
 	unsigned long rodata_start = PFN_ALIGN(__start_rodata);
+#ifdef CONFIG_UNIKERNEL_LINUX
+	unsigned long end = (unsigned long) &__tls_bss_end;
+#else
 	unsigned long end = (unsigned long)__end_rodata_hpage_align;
+#endif
 	unsigned long text_end = PFN_ALIGN(_etext);
+#ifdef CONFIG_UNIKERNEL_LINUX
+	unsigned long rodata_end = PFN_ALIGN(&__tls_bss_end);
+#else
 	unsigned long rodata_end = PFN_ALIGN(__end_rodata);
+#endif
 	unsigned long all_end;
 
 	printk(KERN_INFO "Write protecting the kernel read-only data: %luk\n",
@@ -1396,7 +1404,11 @@ void mark_rodata_ro(void)
 	 * has been zapped already via cleanup_highmem().
 	 */
 	all_end = roundup((unsigned long)_brk_end, PMD_SIZE);
+#ifdef CONFIG_UNIKERNEL_LINUX
+	set_memory_nx(rodata_start, (all_end - rodata_start) >> PAGE_SHIFT);
+#else
 	set_memory_nx(text_end, (all_end - text_end) >> PAGE_SHIFT);
+#endif
 
 	set_ftrace_ops_ro();
 
@@ -1407,11 +1419,13 @@ void mark_rodata_ro(void)
 	printk(KERN_INFO "Testing CPA: again\n");
 	set_memory_ro(start, (end-start) >> PAGE_SHIFT);
 #endif
-
+#ifndef CONFIG_UNIKERNEL_LINUX
+	/* FIXME: Calculate correct offsets to free pages below for the UKL case*/
 	free_kernel_image_pages("unused kernel image (text/rodata gap)",
 				(void *)text_end, (void *)rodata_start);
 	free_kernel_image_pages("unused kernel image (rodata/data gap)",
 				(void *)rodata_end, (void *)_sdata);
+#endif
 
 	debug_checkwx();
 }

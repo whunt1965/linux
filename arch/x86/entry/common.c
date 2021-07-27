@@ -70,6 +70,21 @@ static __always_inline bool do_syscall_x32(struct pt_regs *regs, int nr)
 	return false;
 }
 
+inline int get_in_user (void){
+	/*
+	 * 0 = Non UKL thread
+	 * 1 = UKL thread - in kernel code
+	 * 2 = UKL thread - in user code
+	 */
+	return current->in_user;
+}
+inline void enter_user (void){
+	current->in_user = 2;
+}
+inline void exit_user (void){
+	current->in_user = 1;
+}
+
 __visible noinstr void do_syscall_64(struct pt_regs *regs, int nr)
 {
 	add_random_kstack_offset();
