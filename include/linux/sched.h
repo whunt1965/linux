@@ -658,6 +658,10 @@ struct kmap_ctrl {
 #endif
 };
 
+inline int get_in_user (void);
+inline void enter_user (void);
+inline void exit_user (void);
+
 struct task_struct {
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	/*
@@ -675,6 +679,9 @@ struct task_struct {
 	randomized_struct_fields_start
 
 	void				*stack;
+#ifdef CONFIG_UNIKERNEL_LINUX
+	int				in_user;
+#endif
 	refcount_t			usage;
 	/* Per task flags (PF_*), defined further below: */
 	unsigned int			flags;

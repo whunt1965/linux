@@ -484,22 +484,30 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
 {
 	WARN_ON_ONCE(regs != current_pt_regs());
 
-	if (static_cpu_has(X86_BUG_NULL_SEG)) {
-		/* Loading zero below won't clear the base. */
-		loadsegment(fs, __USER_DS);
-		load_gs_index(__USER_DS);
+	if(get_in_user() == 0){
+		if (static_cpu_has(X86_BUG_NULL_SEG)) {
+			/* Loading zero below won't clear the base. */
+			loadsegment(fs, __USER_DS);
+			load_gs_index(__USER_DS);
+		}
+	
+		loadsegment(fs, 0);
+		loadsegment(es, _ds);
+		loadsegment(ds, _ds);
+		load_gs_index(0);
+	
+		regs->ip		= new_ip;
+		regs->sp		= new_sp;
+		regs->cs		= _cs;
+		regs->ss		= _ss;
+		regs->flags		= X86_EFLAGS_IF;
+	} else {
+		regs->ip		= new_ip;
+		regs->sp		= new_sp;
+		regs->cs		= __KERNEL_CS;
+		regs->ss		= __KERNEL_DS;
+		regs->flags		= X86_EFLAGS_IF;
 	}
-
-	loadsegment(fs, 0);
-	loadsegment(es, _ds);
-	loadsegment(ds, _ds);
-	load_gs_index(0);
-
-	regs->ip		= new_ip;
-	regs->sp		= new_sp;
-	regs->cs		= _cs;
-	regs->ss		= _ss;
-	regs->flags		= X86_EFLAGS_IF;
 }
 
 void

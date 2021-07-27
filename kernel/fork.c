@@ -1156,6 +1156,8 @@ void set_mm_exe_file(struct mm_struct *mm, struct file *new_exe_file)
 {
 	struct file *old_exe_file;
 
+	printk("set_mm_exe_file mm = 0x%lx init_mm = 0x%lx\n", mm, &init_mm);
+
 	/*
 	 * It is safe to dereference the exe_file without RCU as
 	 * this function is only called if nobody else can access
@@ -2614,7 +2616,7 @@ SYSCALL_DEFINE5(clone, unsigned long, clone_flags, unsigned long, newsp,
 #endif
 {
 	struct kernel_clone_args args = {
-		.flags		= (lower_32_bits(clone_flags) & ~CSIGNAL),
+		.flags		= (clone_flags & ~CSIGNAL),
 		.pidfd		= parent_tidptr,
 		.child_tid	= child_tidptr,
 		.parent_tid	= parent_tidptr,
