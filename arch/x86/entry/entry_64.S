@@ -217,6 +217,32 @@ syscall_return_via_sysret:
 	sysretq
 SYM_CODE_END(entry_SYSCALL_64)
 
+SYM_CODE_START(ukl_ss_u2k)
+	pushq	%rax
+	call	exit_user
+	movq	%rsp, %rax
+	addq	$0x10, %rax
+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+	pushq	%rax
+	subq	$0x10, %rax
+	pushq	8(%rax)
+	movq	(%rax), %rax
+	retq
+SYM_CODE_END(ukl_ss_u2k)
+
+SYM_CODE_START(ukl_ss_k2u)
+	pushq	%rax
+	movq	%rsp, %rax
+	movq	0x10(%rax), %rsp
+	pushq	8(%rax)
+	movq	(%rax), %rax
+
+	pushq	%rax
+	call	enter_user
+	popq	%rax
+	retq
+SYM_CODE_END(ukl_ss_k2u)
+
 SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* syscalls will always come from user code so we dont need to 
         check stack cs value. We will leave that as 0x10, because kernel 
