@@ -230,7 +230,9 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
+#ifndef CONFIG_UKL_SAME_STACK
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+#endif
 
 	/* Construct struct pt_regs on stack */
 	pushq	$__KERNEL_DS				/* pt_regs->ss */
@@ -256,6 +258,13 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
         movq    %rsi, (%rdi)
         movq    %rdi, RSP(%rsp)
 
+#ifdef CONFIG_UKL_SAME_STACK
+	/* just for clone in no stack switch case
+	clone takes parent's pt_regs from tss_sp2 
+	which is a scratch space */
+	movq    %rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+#endif
+
 	/* IRQs are off. */
 	movq	%rsp, %rdi
 	/* Sign extend the lower 32bit as syscall numbers are treated as int */
@@ -273,6 +282,16 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
         call    enter_user
         popq    %rax
 
+        /* Special Signal handler case. Always do iret, no need to 
+         * optimize with ret because signals will be rare and
+         * optimizing them would complicate the code
+         */
+        cmpq    $0xC3, CS-RIP(%rsp)
+        jne     1f
+	movq    $0x10, CS-RIP(%rsp)
+	INTERRUPT_RETURN
+
+1:
         /* Swing to user stack and pop flags */
         movq 0x18(%rsp), %rsp
         popfq
@@ -348,6 +367,10 @@ SYM_CODE_START(ret_from_fork)
 	UNWIND_HINT_REGS
 	movq	%rsp, %rdi
 	call	syscall_exit_to_user_mode	/* returns with IRQs disabled */
+#ifdef CONFIG_UKL_SAME_STACK
+	movq	RSP(%rsp), %rdi
+	call	find_user_vma
+#endif
 	jmp	swapgs_restore_regs_and_return_to_usermode
 
 1:

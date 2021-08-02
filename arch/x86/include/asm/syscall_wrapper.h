@@ -225,11 +225,19 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
 
 #endif /* CONFIG_COMPAT */
 
+extern void ukl_ss_u2k(void);
+extern void ukl_ss_k2u(void);
+
+#ifdef CONFIG_UKL_SAME_STACK
 #define __SYSCALL_DEFINEx(x, name, ...)					\
 	static long __se_sys##name(__MAP(x,__SC_LONG,__VA_ARGS__));	\
 	static inline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
 	__X64_SYS_STUBx(x, name, __VA_ARGS__)				\
 	__IA32_SYS_STUBx(x, name, __VA_ARGS__)				\
+	long ukl_bp##name(__MAP(x,__SC_DECL,__VA_ARGS__))		\
+	{								\
+		return __do_sys##name(__MAP(x,__SC_CAST,__VA_ARGS__));	\
+	}								\
 	static long __se_sys##name(__MAP(x,__SC_LONG,__VA_ARGS__))	\
 	{								\
 		long ret = __do_sys##name(__MAP(x,__SC_CAST,__VA_ARGS__));\
@@ -238,6 +246,29 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
 		return ret;						\
 	}								\
 	static inline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))
+#else
+#define __SYSCALL_DEFINEx(x, name, ...)					\
+	static long __se_sys##name(__MAP(x,__SC_LONG,__VA_ARGS__));	\
+	static noinline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__));\
+	__X64_SYS_STUBx(x, name, __VA_ARGS__)				\
+	__IA32_SYS_STUBx(x, name, __VA_ARGS__)				\
+	long ukl_bp##name(__MAP(x,__SC_DECL,__VA_ARGS__))		\
+	{								\
+		long ret;						\
+		ukl_ss_u2k();						\
+		ret = __do_sys##name(__MAP(x,__SC_CAST,__VA_ARGS__));	\
+		ukl_ss_k2u();						\
+		return ret;						\
+	}								\
+	static long __se_sys##name(__MAP(x,__SC_LONG,__VA_ARGS__))	\
+	{								\
+		long ret = __do_sys##name(__MAP(x,__SC_CAST,__VA_ARGS__));\
+		__MAP(x,__SC_TEST,__VA_ARGS__);				\
+		__PROTECT(x, ret,__MAP(x,__SC_ARGS,__VA_ARGS__));	\
+		return ret;						\
+	}								\
+	static noinline long __do_sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))
+#endif
 
 /*
  * As the generic SYSCALL_DEFINE0() macro does not decode any parameters for
@@ -246,12 +277,33 @@ extern long __ia32_sys_ni_syscall(const struct pt_regs *regs);
  * SYSCALL_DEFINEx() -- which is essential for the COND_SYSCALL() and SYS_NI()
  * macros to work correctly.
  */
+#ifdef CONFIG_UKL_SAME_STACK
 #define SYSCALL_DEFINE0(sname)						\
 	SYSCALL_METADATA(_##sname, 0);					\
 	static long __do_sys_##sname(const struct pt_regs *__unused);	\
 	__X64_SYS_STUB0(sname)						\
 	__IA32_SYS_STUB0(sname)						\
+	long ukl_bp_##sname(void)					\
+	{								\
+		return __do_sys_##sname(NULL);				\
+	}								\
 	static long __do_sys_##sname(const struct pt_regs *__unused)
+#else
+#define SYSCALL_DEFINE0(sname)						\
+	SYSCALL_METADATA(_##sname, 0);					\
+	static long __do_sys_##sname(const struct pt_regs *__unused);	\
+	__X64_SYS_STUB0(sname)						\
+	__IA32_SYS_STUB0(sname)						\
+	long ukl_bp_##sname(void)					\
+	{								\
+		long ret;						\
+		ukl_ss_u2k();						\
+		ret = __do_sys_##sname(NULL);				\
+		ukl_ss_k2u();						\
+		return ret;						\
+	}								\
+	static long __do_sys_##sname(const struct pt_regs *__unused)
+#endif
 
 #define COND_SYSCALL(name)						\
 	__X64_COND_SYSCALL(name)					\

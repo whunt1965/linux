@@ -36,3 +36,9 @@ config UNIKERNEL_LINUX
        def_bool y
        help
         Turn on UKL mode
+
+config UKL_SAME_STACK
+	bool "UKL Same Stack"
+	depends on UNIKERNEL_LINUX
+	help
+ 	Use user stack when switching to kernel code i.e., dont switch to kernel stack when entering the kernel

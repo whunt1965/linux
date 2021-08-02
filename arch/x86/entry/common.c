@@ -85,6 +85,30 @@ inline void exit_user (void){
 	current->in_user = 1;
 }
 
+#ifdef CONFIG_UKL_SAME_STACK
+void find_user_vma(unsigned long addr){
+	struct vm_area_struct *usv;
+	struct task_struct *tsk;
+	struct mm_struct *mm;
+
+	tsk = current;
+	mm = tsk->mm;
+
+	if (unlikely(!mmap_read_trylock(mm))) {
+		mmap_read_lock(mm);
+	}
+
+	usv = find_vma(mm, addr);
+
+	mmap_read_unlock(mm);
+
+	if(usv == NULL){
+		printk("Error: Could not find user stack vma!");
+	}
+	tsk->user_stack_vma = usv;
+}
+#endif
+
 __visible noinstr void do_syscall_64(struct pt_regs *regs, int nr)
 {
 	add_random_kstack_offset();
