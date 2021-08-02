@@ -1219,6 +1219,10 @@ void do_user_addr_fault(struct pt_regs *regs,
 	struct mm_struct *mm;
 	vm_fault_t fault;
 	unsigned int flags = FAULT_FLAG_DEFAULT;
+	int get_rwsem_lock = 1;
+#ifdef CONFIG_UKL_SAME_STACK
+	struct vm_area_struct *usv;
+#endif
 
 	tsk = current;
 	mm = tsk->mm;
@@ -1316,6 +1320,19 @@ void do_user_addr_fault(struct pt_regs *regs,
 	}
 #endif
 
+#ifdef CONFIG_UKL_SAME_STACK
+	if(get_in_user() > 0){
+		/* Checking if addr is a stack addr */
+		usv = tsk->user_stack_vma;
+		if (usv){
+			if (usv->vm_start <= address && usv->vm_end > address){
+				vma = usv;
+				get_rwsem_lock = 0;
+			}
+		}
+	}
+#endif
+
 	/*
 	 * Kernel-mode access to the user address space should only occur
 	 * on well-defined single instructions listed in the exception
@@ -1328,27 +1345,29 @@ void do_user_addr_fault(struct pt_regs *regs,
 	 * 1. Failed to acquire mmap_lock, and
 	 * 2. The access did not originate in userspace.
 	 */
-	if (unlikely(!mmap_read_trylock(mm))) {
-		if (get_in_user() == 0 && !user_mode(regs) && !search_exception_tables(regs->ip)) {
-			/*
-			 * Fault from code in kernel from
-			 * which we do not expect faults.
-			 */
-			bad_area_nosemaphore(regs, error_code, address);
-			return;
-		}
+	if(get_rwsem_lock){
+		if (unlikely(!mmap_read_trylock(mm))) {
+			if (get_in_user() == 0 && !user_mode(regs) && !search_exception_tables(regs->ip)) {
+				/*
+				 * Fault from code in kernel from
+				 * which we do not expect faults.
+				 */
+				bad_area_nosemaphore(regs, error_code, address);
+				return;
+			}
 retry:
-		mmap_read_lock(mm);
-	} else {
-		/*
-		 * The above down_read_trylock() might have succeeded in
-		 * which case we'll have missed the might_sleep() from
-		 * down_read():
-		 */
-		might_sleep();
-	}
+			mmap_read_lock(mm);
+		} else {
+			/*
+			 * The above down_read_trylock() might have succeeded in
+			 * which case we'll have missed the might_sleep() from
+			 * down_read():
+			 */
+			might_sleep();
+		}
 
-	vma = find_vma(mm, address);
+		vma = find_vma(mm, address);
+	}
 	if (unlikely(!vma)) {
 		bad_area(regs, error_code, address);
 		return;
@@ -1410,8 +1429,10 @@ good_area:
 		flags |= FAULT_FLAG_TRIED;
 		goto retry;
 	}
-
-	mmap_read_unlock(mm);
+	
+	if (get_rwsem_lock){
+		mmap_read_unlock(mm);
+	}
 	if (likely(!(fault & VM_FAULT_ERROR)))
 		return;
 

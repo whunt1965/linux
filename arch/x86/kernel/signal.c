@@ -796,10 +796,18 @@ static inline unsigned long get_nr_restart_syscall(const struct pt_regs *regs)
 void arch_do_signal_or_restart(struct pt_regs *regs, bool has_signal)
 {
 	struct ksignal ksig;
+#ifdef CONFIG_UKL_SAME_STACK
+	void (*ukl_handler)(int,...);
+#endif
 
 	if (has_signal && get_signal(&ksig)) {
 		/* Whee! Actually deliver the signal.  */
+#ifdef CONFIG_UKL_SAME_STACK
+		ukl_handler = (void*) ksig.ka.sa.sa_handler;
+		ukl_handler(ksig.sig, &ksig.info, &ksig.ka.sa.sa_restorer);
+#else
 		handle_signal(&ksig, regs);
+#endif
 		return;
 	}
 
