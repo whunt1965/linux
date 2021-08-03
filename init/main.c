@@ -1547,11 +1547,6 @@ static int __ref kernel_init(void *unused)
 	ukl_args.__envp = ukl_envp_init;
 	kernel_thread(ukl_create_userspace, (void *)&ukl_args, CLONE_FS);
 
-	while(1){
-		set_current_state(TASK_UNINTERRUPTIBLE);
-		cond_resched();
-	}
-
 	ssleep(10);
 
 	exit_user();
