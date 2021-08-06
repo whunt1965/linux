@@ -29,6 +29,9 @@
 #define	IST_INDEX_DB		2
 #define	IST_INDEX_MCE		3
 #define	IST_INDEX_VC		4
+#ifdef CONFIG_UKL_USE_IST_PF
+#define	IST_INDEX_PF		5
+#endif
 
 /*
  * Set __PAGE_OFFSET to the most negative possible address +
