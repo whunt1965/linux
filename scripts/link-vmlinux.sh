@@ -97,7 +97,8 @@ modpost_link()
 		info LD ${1}
 	fi
 
-	${LD} ${KBUILD_LDFLAGS} --unresolved-symbols=ignore-all --allow-multiple-definition -r -o ${1} ${lds} ${objects}
+#	${LD} ${KBUILD_LDFLAGS} --unresolved-symbols=ignore-all -r -o ${1} ${lds} ${objects}
+	${LD} ${KBUILD_LDFLAGS} -r -o ${1} ${lds} ${objects}
 }
 
 objtool_link()
@@ -189,8 +190,7 @@ vmlinux_link()
 				${@}"
 		fi
 
-		${LD} --unresolved-symbols=ignore-all           \
-                        --allow-multiple-definition             \
+		${LD}           \
 			${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}	\
 			${strip_debug#-Wl,}			\
 			-o ${output}				\
