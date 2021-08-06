@@ -48,3 +48,10 @@ config UKL_USE_RET
 	depends on UNIKERNEL_LINUX
 	help 
 	 Use ret instead of iret when returning from kernel after interrupts and faults
+
+config UKL_CREATE_AFTERSPACE
+	bool "UKL create an afterspace to run after UKL finishes"
+        def_bool y
+	depends on UNIKERNEL_LINUX
+	help
+	 You can kill init before ukl runs and then create an afterspace to get results etc out.
