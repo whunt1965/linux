@@ -97,7 +97,6 @@ modpost_link()
 		info LD ${1}
 	fi
 
-#	${LD} ${KBUILD_LDFLAGS} --unresolved-symbols=ignore-all -r -o ${1} ${lds} ${objects}
 	${LD} ${KBUILD_LDFLAGS} -r -o ${1} ${lds} ${objects}
 }
 
@@ -190,8 +189,7 @@ vmlinux_link()
 				${@}"
 		fi
 
-		${LD}           \
-			${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}	\
+		${LD} 	${KBUILD_LDFLAGS} ${LDFLAGS_vmlinux}	\
 			${strip_debug#-Wl,}			\
 			-o ${output}				\
 			${map_option}				\
