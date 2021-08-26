@@ -360,6 +360,10 @@ SYM_CODE_START(ret_from_fork)
 	UNWIND_HINT_REGS
 	movq	%rsp, %rdi
 	call	syscall_exit_to_user_mode	/* returns with IRQs disabled */
+#ifdef CONFIG_UKL_SAME_STACK
+	movq    RSP(%rsp), %rdi
+	call    find_user_vma
+#endif
 	jmp	swapgs_restore_regs_and_return_to_usermode
 
 1:
