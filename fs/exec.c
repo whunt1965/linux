@@ -363,7 +363,12 @@ static int bprm_mm_init(struct linux_binprm *bprm)
 	int err;
 	struct mm_struct *mm = NULL;
 
-	bprm->mm = mm = mm_alloc();
+	if(get_in_user() > 0){
+		bprm->mm = mm = &init_mm;
+        } else {
+		bprm->mm = mm = mm_alloc();
+	}
+
 	err = -ENOMEM;
 	if (!mm)
 		goto err;
@@ -1239,9 +1244,11 @@ int begin_new_exec(struct linux_binprm * bprm)
 	int retval;
 
 	/* Once we are committed compute the creds */
-	retval = bprm_creds_from_file(bprm);
-	if (retval)
-		return retval;
+	if(get_in_user() == 0){
+		retval = bprm_creds_from_file(bprm);
+		if (retval)
+			return retval;
+	}
 
 	/*
 	 * Ensure all future errors are fatal.
@@ -1273,9 +1280,11 @@ int begin_new_exec(struct linux_binprm * bprm)
 	set_mm_exe_file(bprm->mm, bprm->file);
 
 	/* If the binary is not readable then enforce mm->dumpable=0 */
-	would_dump(bprm, bprm->file);
-	if (bprm->have_execfd)
-		would_dump(bprm, bprm->executable);
+	if(get_in_user() == 0){
+		would_dump(bprm, bprm->file);
+		if (bprm->have_execfd)
+			would_dump(bprm, bprm->executable);
+	}
 
 	/*
 	 * Release all of the old mmap stuff
@@ -1503,19 +1512,23 @@ static struct linux_binprm *alloc_bprm(int fd, struct filename *filename)
 	if (!bprm)
 		goto out;
 
-	if (fd == AT_FDCWD || filename->name[0] == '/') {
-		bprm->filename = filename->name;
+	if(get_in_user() == 0){
+		if (fd == AT_FDCWD || filename->name[0] == '/') {
+			bprm->filename = filename->name;
+		} else {
+			if (filename->name[0] == '\0')
+				bprm->fdpath = kasprintf(GFP_KERNEL, "/dev/fd/%d", fd);
+			else
+				bprm->fdpath = kasprintf(GFP_KERNEL, "/dev/fd/%d/%s",
+							  fd, filename->name);
+			if (!bprm->fdpath)
+				goto out_free;
+	
+			bprm->filename = bprm->fdpath;
+		}
 	} else {
-		if (filename->name[0] == '\0')
-			bprm->fdpath = kasprintf(GFP_KERNEL, "/dev/fd/%d", fd);
-		else
-			bprm->fdpath = kasprintf(GFP_KERNEL, "/dev/fd/%d/%s",
-						  fd, filename->name);
-		if (!bprm->fdpath)
-			goto out_free;
-
-		bprm->filename = bprm->fdpath;
-	}
+                bprm->filename = "UKL";
+        }
 	bprm->interp = bprm->filename;
 
 	retval = bprm_mm_init(bprm);
@@ -1701,42 +1714,50 @@ static int search_binary_handler(struct linux_binprm *bprm)
 	bool need_retry = IS_ENABLED(CONFIG_MODULES);
 	struct linux_binfmt *fmt;
 	int retval;
-
-	retval = prepare_binprm(bprm);
-	if (retval < 0)
-		return retval;
-
-	retval = security_bprm_check(bprm);
-	if (retval)
-		return retval;
-
-	retval = -ENOENT;
+	if(get_in_user() == 0){
+		retval = prepare_binprm(bprm);
+		if (retval < 0)
+			return retval;
+	
+		retval = security_bprm_check(bprm);
+		if (retval)
+			return retval;
+	
+		retval = -ENOENT;
  retry:
-	read_lock(&binfmt_lock);
-	list_for_each_entry(fmt, &formats, lh) {
-		if (!try_module_get(fmt->module))
-			continue;
-		read_unlock(&binfmt_lock);
-
-		retval = fmt->load_binary(bprm);
-
 		read_lock(&binfmt_lock);
-		put_binfmt(fmt);
-		if (bprm->point_of_no_return || (retval != -ENOEXEC)) {
+		list_for_each_entry(fmt, &formats, lh) {
+			if (!try_module_get(fmt->module))
+				continue;
 			read_unlock(&binfmt_lock);
-			return retval;
+	
+			retval = fmt->load_binary(bprm);
+	
+			read_lock(&binfmt_lock);
+			put_binfmt(fmt);
+			if (bprm->point_of_no_return || (retval != -ENOEXEC)) {
+				read_unlock(&binfmt_lock);
+				return retval;
+			}
 		}
-	}
-	read_unlock(&binfmt_lock);
-
-	if (need_retry) {
-		if (printable(bprm->buf[0]) && printable(bprm->buf[1]) &&
-		    printable(bprm->buf[2]) && printable(bprm->buf[3]))
-			return retval;
-		if (request_module("binfmt-%04x", *(ushort *)(bprm->buf + 2)) < 0)
-			return retval;
-		need_retry = false;
-		goto retry;
+		read_unlock(&binfmt_lock);
+	
+		if (need_retry) {
+			if (printable(bprm->buf[0]) && printable(bprm->buf[1]) &&
+			    printable(bprm->buf[2]) && printable(bprm->buf[3]))
+				return retval;
+			if (request_module("binfmt-%04x", *(ushort *)(bprm->buf + 2)) < 0)
+				return retval;
+			need_retry = false;
+			goto retry;
+		}
+	} else {
+		list_for_each_entry(fmt, &formats, lh) {
+			retval = fmt->load_binary(bprm);
+			if (retval == 0){
+                                return retval;
+                        }
+		}
 	}
 
 	return retval;
@@ -1803,10 +1824,12 @@ static int bprm_execve(struct linux_binprm *bprm,
 	check_unsafe_exec(bprm);
 	current->in_execve = 1;
 
-	file = do_open_execat(fd, filename, flags);
-	retval = PTR_ERR(file);
-	if (IS_ERR(file))
-		goto out_unmark;
+	if(get_in_user() == 0){
+		file = do_open_execat(fd, filename, flags);
+		retval = PTR_ERR(file);
+		if (IS_ERR(file))
+			goto out_unmark;
+	}
 
 	sched_exec();
 
@@ -1824,9 +1847,11 @@ static int bprm_execve(struct linux_binprm *bprm,
 		bprm->interp_flags |= BINPRM_FLAGS_PATH_INACCESSIBLE;
 
 	/* Set the unchanging part of bprm->cred */
-	retval = security_bprm_creds_for_exec(bprm);
-	if (retval)
-		goto out;
+	if (get_in_user() == 0){
+		retval = security_bprm_creds_for_exec(bprm);
+		if (retval)
+			goto out;
+	}
 
 	retval = exec_binprm(bprm);
 	if (retval < 0)
