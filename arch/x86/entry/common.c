@@ -109,6 +109,39 @@ void find_user_vma(unsigned long addr){
 }
 #endif
 
+void ukl_set_bypass_limit(int val){
+        current->ukl_bypass_limit = val;
+        printk("Setting bypass limit to %d\n", val);
+}
+
+void ukl_set_bypass_syscall(int val){
+        current->ukl_bypass_syscall = val;
+        if (current->ukl_bypass_limit == 0){
+                current->ukl_bypass_limit = 50;
+                printk("Setting bypass limit to 50 (DEFAULT)\n");
+        }
+}
+
+int ukl_get_bypass_syscall(void){
+        struct thread_info *ti;
+        int ret = current->ukl_bypass_syscall;
+
+        if (ret == 0)
+                return ret;
+
+        ti = current_thread_info();
+        if (READ_ONCE(ti->flags) & _TIF_SIGPENDING)
+                return 0;
+
+        current->ukl_bypass_current++;
+        if (current->ukl_bypass_current >= current->ukl_bypass_limit){
+                current->ukl_bypass_current = 0;
+                ret = 0;
+        }
+
+        return ret;
+}
+
 __visible noinstr void do_syscall_64(struct pt_regs *regs, int nr)
 {
 	add_random_kstack_offset();
