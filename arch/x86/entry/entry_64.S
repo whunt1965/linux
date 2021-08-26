@@ -258,6 +258,13 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
         movq    %rsi, (%rdi)
         movq    %rdi, RSP(%rsp)
 
+#ifdef CONFIG_UKL_SAME_STACK
+	/* just for clone in no stack switch case
+	clone takes parent's pt_regs from tss_sp2 
+	which is a scratch space */
+	movq    %rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
+#endif
+
 	/* IRQs are off. */
 	movq	%rsp, %rdi
 	/* Sign extend the lower 32bit as syscall numbers are treated as int */
