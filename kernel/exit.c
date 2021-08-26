@@ -724,10 +724,20 @@ static void check_stack_usage(void)
 static inline void check_stack_usage(void) {}
 #endif
 
+#ifdef CONFIG_UKL_CREATE_AFTERSPACE
+extern struct completion ukl_done;
+#endif
+
 void __noreturn do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
+
+#ifdef CONFIG_UKL_CREATE_AFTERSPACE
+	if (unlikely(is_global_init(tsk))){
+		complete(&ukl_done);
+	}
+#endif
 
 	/*
 	 * We can get here from a kernel oops, sometimes with preemption off.
