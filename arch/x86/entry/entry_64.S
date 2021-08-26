@@ -678,8 +678,10 @@ SYM_CODE_START(\asmsym)
         /*  UKL CODE START  */
         /* **************** */
 
+#ifndef CONFIG_UKL_USE_IST_PF
         movq    $0x2, (%rsp)
         jmp     asm_exc_page_fault
+#endif
 
         /* **************** */
         /*   UKL CODE END   */

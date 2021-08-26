@@ -49,3 +49,10 @@ config UKL_USE_RET
         help 
         Use ret instead of iret when returning from kernel after interrupts and faults
 
+config UKL_USE_IST_PF
+       bool "UKL use IST for PF instead of DF"
+       depends on UNIKERNEL_LINUX
+       help 
+        Choose this option so that all PFs are handled on a special exception stack from IST. 
+        If this option is not chosen, PFs are not handled specially. Only the case where, due 
+        to lack of stack, PFs turn into double faults, handle it specially on a double fault stack.
