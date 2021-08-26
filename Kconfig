@@ -42,3 +42,10 @@ config UKL_SAME_STACK
 	depends on UNIKERNEL_LINUX
 	help
  	Use user stack when switching to kernel code i.e., dont switch to kernel stack when entering the kernel
+
+config UKL_USE_RET
+        bool "UKL user ret instead of iret"
+        depends on UNIKERNEL_LINUX
+        help 
+        Use ret instead of iret when returning from kernel after interrupts and faults
+
