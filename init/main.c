@@ -1478,9 +1478,46 @@ void __weak free_initmem(void)
 	free_initmem_default(POISON_FREE_INITMEM);
 }
 
+struct ukl_init_args{
+	const char *init_filename;
+	const char * const *__argv;
+	const char * const *__envp;
+};
+
+static int ukl_create_userspace(void* arg){
+	const char *const *p;
+	struct ukl_init_args * ukl_args = (struct ukl_init_args *) arg;
+	const char *init_filename = ukl_args->init_filename;
+	const char * const *ukl_argv_init = ukl_args->__argv;
+        const char * const *ukl_envp_init = ukl_args->__envp;
+
+	printk("PID %d and in_user is %d is creating userspace.\n",\
+                        current->pid, get_in_user());
+	pr_info("Run %s as init process\n", init_filename);
+	pr_debug("  with arguments:\n");
+	for (p = ukl_argv_init; *p; p++)
+		pr_debug("    %s\n", *p);
+	pr_info("  with environment:\n");
+	for (p = ukl_envp_init; *p; p++)
+		pr_debug("    %s\n", *p);
+	return kernel_execve(init_filename, ukl_argv_init, ukl_envp_init);
+}
+
 static int __ref kernel_init(void *unused)
 {
 	int ret;
+	const char *ukl_argv_init[MAX_INIT_ARGS+2];
+	const char *ukl_envp_init[MAX_INIT_ENVS+2];
+	int i;
+	struct ukl_init_args ukl_args;
+
+	for(i = 0; i < MAX_INIT_ARGS+2; i++){
+		ukl_argv_init[i] = argv_init[i];
+	}
+
+	for(i = 0; i < MAX_INIT_ARGS+2; i++){
+		ukl_envp_init[i] = envp_init[i];
+	}
 
 	/*
 	 * Wait until kthreadd is all set-up.
@@ -1508,6 +1545,19 @@ static int __ref kernel_init(void *unused)
 	rcu_end_inkernel_boot();
 
 	do_sysctl_args();
+
+	ukl_argv_init[0] = ramdisk_execute_command;
+ 	ukl_args.init_filename = ramdisk_execute_command;
+	ukl_args.__argv = ukl_argv_init;
+	ukl_args.__envp = ukl_envp_init;
+	kernel_thread(ukl_create_userspace, (void *)&ukl_args, CLONE_FS);
+
+	ssleep(10);
+
+	exit_user();
+
+	printk("In PID %d and in_user is %d\nGoing to create UKL here.\n",\
+			current->pid, get_in_user());
 
 	if (ramdisk_execute_command) {
 		ret = run_init_process(ramdisk_execute_command);
