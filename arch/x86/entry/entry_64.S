@@ -230,7 +230,9 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
 	/* tss.sp2 is scratch space. */
 	movq	%rsp, PER_CPU_VAR(cpu_tss_rw + TSS_sp2)
 	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp
+#ifndef CONFIG_UKL_SAME_STACK
 	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+#endif
 
 	/* Construct struct pt_regs on stack */
 	pushq	$__KERNEL_DS				/* pt_regs->ss */
@@ -273,6 +275,16 @@ SYM_CODE_START(ukl_entry_SYSCALL_64)
         call    enter_user
         popq    %rax
 
+        /* Special Signal handler case. Always do iret, no need to 
+         * optimize with ret because signals will be rare and
+         * optimizing them would complicate the code
+         */
+        cmpq    $0xC3, CS-RIP(%rsp)
+        jne     1f
+	movq    $0x10, CS-RIP(%rsp)
+	INTERRUPT_RETURN
+
+1:
         /* Swing to user stack and pop flags */
         movq 0x18(%rsp), %rsp
         popfq
