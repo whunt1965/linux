@@ -31,7 +31,7 @@ jobs:
 
       # Installs required packages
       - name: Install requirements
-        run: sudo apt-get install git install git build-essential flex bison supermin
+        run: sudo apt-get install git build-essential flex bison supermin
 
       # Makes the linux directory
       - name: Build linux dir
