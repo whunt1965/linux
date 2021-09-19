@@ -34,16 +34,16 @@ jobs:
       - name: checkout config file
         uses: actions/checkout@v2
         with:
-            repository: whunt1965/Linux-Configs
+            repository: unikernelLinux/Linux-Configs
             ref: master
             token: ${{ secrets.ukl_token }}
             path: Linux-Configs
             
       #Checkout UKL Linux Main repo      
-      - name: checkout config file
+      - name: checkout Linux UKL Repo
         uses: actions/checkout@v2
         with:
-            repository: whunt1965/linux
+#             repository: whunt1965/linux
             ref: ukl-5.14 
             path: linux
 
