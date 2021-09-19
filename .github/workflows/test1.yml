@@ -28,6 +28,13 @@ jobs:
         with:
           repository: whunt1965/ukl
           token: ${{ secrets.ukl_token }}
+          
+      - name: checkout config file
+        uses: actions/checkout@v2
+        with:
+            repository: whunt/Linux-Configs
+            token: ${{ secrets.ukl_token }}
+            path: Linux-Configs
 
       # Installs required packages
       - name: Install requirements
