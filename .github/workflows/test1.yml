@@ -22,13 +22,15 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    
+      # Checks-out Makefile from UKL repo
       - name: Checkout MakeFile
         uses: actions/checkout@v2
         with:
           repository: whunt1965/ukl
           token: ${{ secrets.ukl_token }}
-          
+      
+      #Checkout Linux-Configs repo
       - name: checkout config file
         uses: actions/checkout@v2
         with:
@@ -36,6 +38,14 @@ jobs:
             ref: master
             token: ${{ secrets.ukl_token }}
             path: Linux-Configs
+            
+      #Checkout UKL Linux Main repo      
+      - name: checkout config file
+        uses: actions/checkout@v2
+        with:
+            repository: whunt1965/linux
+            ref: ukl-5.14 
+            path: linux
 
       # Installs required packages
       - name: Install requirements
