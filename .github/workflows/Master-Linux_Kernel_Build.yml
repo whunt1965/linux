@@ -34,7 +34,7 @@ jobs:
         run: sudo apt-get install build-essential flex bison libelf-dev libssl-dev
         
       # Create Linux Config File
-      - name: Build Kernel
+      - name: Make Config File
         run: make defconfig 
 
       # Build the kernel
