@@ -32,6 +32,10 @@ jobs:
       # Installs required packages
       - name: Install requirements
         run: sudo apt-get install build-essential flex bison libelf-dev libssl-dev
+        
+      # Create Linux Config File
+      - name: Build Kernel
+        run: make defconfig 
 
       # Build the kernel
       - name: Build Kernel
