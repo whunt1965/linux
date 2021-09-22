@@ -26,8 +26,8 @@ jobs:
       #Checkout Linux repo  Master branch    
       - name: checkout Linux Repo Master Branch
         uses: actions/checkout@v2
-        with:
-            ref: master 
+        #with:
+            #ref: master 
 
       # Installs required packages
       - name: Install requirements
