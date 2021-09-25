@@ -5,11 +5,10 @@ name: UKL Build
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the ukl-5.14 branch
-  # Note: Disabled for now to prevent running while script is developed
-#   push:
-#     branches: [ ukl-5.14 ]
-#   pull_request:
-#     branches: [ ukl-5.14 ]
+  push:
+    branches: [ ukl-5.14 ]
+  pull_request:
+    branches: [ ukl-5.14 ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
