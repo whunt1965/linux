@@ -77,6 +77,6 @@ jobs:
       - name: Install package requirements
         run: sudo apt-get install git build-essential flex bison supermin libelf-dev libssl-dev texinfo libgmp3-dev libmpc-dev libmpfr-dev
 
-      # Makes Clone Repos Action
-      - name: Clone Repos
-        run: make cloneRepos
+      # Runs Make All to build the UKL
+      - name: make UKL
+        run: make all
