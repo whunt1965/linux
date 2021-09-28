@@ -53,7 +53,7 @@ jobs:
       #Navigate Up one level and copy linux repo into ukl repo
       - name: navigate
         run: |
-          mv /home/runner/work/linux/linux ukl/
+          mv /home/runner/work/linux/linux/linux ukl/
           cd ukl
     
       
