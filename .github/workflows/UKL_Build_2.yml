@@ -32,9 +32,9 @@ jobs:
       #Checkout UKL/Linux repo - branch 5.14      
       - name: checkout Linux UKL Repo
         uses: actions/checkout@v2
-        # with:
+        with:
             # ref: ukl-5.14 
-            # path: linux
+            path: linux
       
       #Navigate Up one level
       - name: navigate
