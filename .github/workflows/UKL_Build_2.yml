@@ -1,6 +1,6 @@
 # This workflow builds the UKL Kernel from Scratch
 
-name: UKL Build
+name: UKL Build 2
 
 # Controls when the workflow will run
 on:
@@ -23,12 +23,39 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     
+      #Setup Directory Structure
+      - name: setup dir
+        run: |
+          mkdir CI
+          cd CI/
+          
+      #Checkout UKL/Linux repo - branch 5.14      
+      - name: checkout Linux UKL Repo
+        uses: actions/checkout@v2
+        with:
+            # ref: ukl-5.14 
+            path: linux
+      
+      #Navigate Up one level
+      - name: navigate
+        run: |
+          pwd
+          ls
+    
       # Checks-out Makefile from UKL repo
       - name: Checkout MakeFile
         uses: actions/checkout@v2
         with:
           repository: whunt1965/ukl
           token: ${{ secrets.ukl_token }}
+          path: ukl
+    
+      #Navigate Up one level and copy linux repo into ukl repo
+      - name: navigate
+        run: |
+          mv /home/runner/work/linux/linux/linux ukl/
+          cd ukl
+    
       
       #Checkout Linux-Configs repo
       - name: checkout config file
@@ -37,14 +64,8 @@ jobs:
             repository: unikernelLinux/Linux-Configs
             ref: master
             token: ${{ secrets.ukl_token }}
-            path: Linux-Configs
+            path: ukl/Linux-Configs
             
-      #Checkout UKL/Linux repo - branch 5.14      
-      - name: checkout Linux UKL Repo
-        uses: actions/checkout@v2
-        with:
-            # ref: ukl-5.14 
-            path: linux
             
       #Checkout gcc repo - branch releases/gcc-9.3.0     
       - name: checkout GCC repo
@@ -52,7 +73,7 @@ jobs:
         with:
             repository: gcc-mirror/gcc
             ref: releases/gcc-9.3.0
-            path: gcc
+            path: ukl/gcc
             
       #Checkout UKL/glibc repo - branch ukl   
       - name: checkout glibc repo
@@ -61,7 +82,7 @@ jobs:
             repository: unikernelLinux/glibc
             ref: ukl
             token: ${{ secrets.ukl_token }}
-            path: glibc
+            path: ukl/glibc
             
       #Checkout min-initrd repo - branch ukl   
       - name: checkout min-initrd repo
@@ -70,7 +91,7 @@ jobs:
             repository: whunt1965/min-initrd
             ref: master
             token: ${{ secrets.ukl_token }}
-            path: min-initrd
+            path: ukl/min-initrd
 
       # Installs required packages for build
       - name: Install package requirements
@@ -78,4 +99,9 @@ jobs:
 
       # Runs Make All to build the UKL
       - name: make UKL
-        run: make all
+        run: |
+          pwd
+          cd ukl/
+          pwd
+          ls
+          make all
