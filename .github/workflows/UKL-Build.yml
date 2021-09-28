@@ -43,7 +43,7 @@ jobs:
       - name: checkout Linux UKL Repo
         uses: actions/checkout@v2
         with:
-            ref: ukl-5.14 
+            # ref: ukl-5.14 
             path: linux
             
       #Checkout gcc repo - branch releases/gcc-9.3.0     
