@@ -39,7 +39,8 @@ jobs:
       #Navigate Up one level
       - name: navigate
         run: |
-          cd ../
+          pwd
+          ls
     
       # Checks-out Makefile from UKL repo
       - name: Checkout MakeFile
