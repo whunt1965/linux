@@ -48,11 +48,12 @@ jobs:
         with:
           repository: whunt1965/ukl
           token: ${{ secrets.ukl_token }}
+          path: ukl
     
       #Navigate Up one level and copy linux repo into ukl repo
       - name: navigate
         run: |
-          mv linux/ ukl/
+          mv /home/runner/work/linux/linux ukl/
           cd ukl
     
       
@@ -63,7 +64,7 @@ jobs:
             repository: unikernelLinux/Linux-Configs
             ref: master
             token: ${{ secrets.ukl_token }}
-            path: Linux-Configs
+            path: ukl/Linux-Configs
             
             
       #Checkout gcc repo - branch releases/gcc-9.3.0     
@@ -72,7 +73,7 @@ jobs:
         with:
             repository: gcc-mirror/gcc
             ref: releases/gcc-9.3.0
-            path: gcc
+            path: ukl/gcc
             
       #Checkout UKL/glibc repo - branch ukl   
       - name: checkout glibc repo
@@ -81,7 +82,7 @@ jobs:
             repository: unikernelLinux/glibc
             ref: ukl
             token: ${{ secrets.ukl_token }}
-            path: glibc
+            path: ukl/glibc
             
       #Checkout min-initrd repo - branch ukl   
       - name: checkout min-initrd repo
@@ -90,7 +91,7 @@ jobs:
             repository: whunt1965/min-initrd
             ref: master
             token: ${{ secrets.ukl_token }}
-            path: min-initrd
+            path: ukl/min-initrd
 
       # Installs required packages for build
       - name: Install package requirements
