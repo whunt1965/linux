@@ -22,25 +22,12 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    
-      #Setup Directory Structure
-      - name: setup dir
-        run: |
-          mkdir CI
-          cd CI/
           
       #Checkout UKL/Linux repo - branch 5.14      
       - name: checkout Linux UKL Repo
         uses: actions/checkout@v2
         with:
-            # ref: ukl-5.14 
             path: linux
-      
-      #Navigate Up one level
-      - name: navigate
-        run: |
-          pwd
-          ls
     
       # Checks-out Makefile from UKL repo
       - name: Checkout MakeFile
@@ -50,8 +37,8 @@ jobs:
           token: ${{ secrets.ukl_token }}
           path: ukl
     
-      #Navigate Up one level and copy linux repo into ukl repo
-      - name: navigate
+      #Copy the Linux Directory into the UKL directory
+      - name: Copy Linux dir into ukl dir
         run: |
           mv /home/runner/work/linux/linux/linux ukl/
           cd ukl
@@ -100,8 +87,5 @@ jobs:
       # Runs Make All to build the UKL
       - name: make UKL
         run: |
-          pwd
           cd ukl/
-          pwd
-          ls
           make all
