@@ -27,7 +27,7 @@ jobs:
       - name: setup dir
         run: |
           mkdir CI
-          cd CI
+          cd CI/
           
       #Checkout UKL/Linux repo - branch 5.14      
       - name: checkout Linux UKL Repo
@@ -99,4 +99,9 @@ jobs:
 
       # Runs Make All to build the UKL
       - name: make UKL
-        run: make all
+        run: |
+          pwd
+          cd ukl/
+          pwd
+          ls
+          make all
