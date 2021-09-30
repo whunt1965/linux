@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: whunt1965/ukl
-          token: ${{ secrets.ukl_token }}
+          token: ${{ secrets.GITHUB_TOKEN}}
           path: ukl
     
       #Copy the Linux Directory into the UKL directory
@@ -50,7 +50,7 @@ jobs:
         with:
             repository: unikernelLinux/Linux-Configs
             ref: master
-            token: ${{ secrets.ukl_token }}
+            token: ${{ secrets.GITHUB_TOKEN }}
             path: ukl/Linux-Configs
             
             
