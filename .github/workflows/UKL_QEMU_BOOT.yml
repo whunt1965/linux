@@ -102,7 +102,7 @@ jobs:
     
       # Install QEMU
       - name: Install QEMU
-        run: sudo apt-get install qemu
+        run: sudo apt-get install qemu-kvm
       
       #Boot QEMU
       - name: Boot QEMU
