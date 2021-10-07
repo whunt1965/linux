@@ -106,5 +106,7 @@ jobs:
       
       #Boot QEMU
       - name: Boot QEMU
-        run: sudo make run
+        run: |
+          cd ukl/
+          sudo make run
       
