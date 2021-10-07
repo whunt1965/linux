@@ -30,7 +30,7 @@ jobs:
      #   run: sudo apt update && sudo apt install qemu-kvm -y
      
       - name: Install KVM
-        run: sudo apt update && sudo apt install qemu
+        run: sudo apt-get update && sudo apt-get install qemu
         
       # Runs a single command using the runners shell
       - name: Get Kernel Image
