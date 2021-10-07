@@ -39,5 +39,4 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Boot KVM
         run: |
-          sudo qemu -hda debian_squeeze_amd64_standard.qcow2 -m 512 -nographic
-     #sudo qemu-system-x86_64 -hda debian_squeeze_amd64_standard.qcow2 -m 512 -nographic
+          sudo qemu-system-x86_64 -hda debian_squeeze_amd64_standard.qcow2 -m 512 -nographic
