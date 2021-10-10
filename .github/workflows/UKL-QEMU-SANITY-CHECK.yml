@@ -118,7 +118,7 @@ jobs:
       - name: Run QEMU Sanity Check
         run: |
           cd qemu-sanity-check
-          sudo ./qemu-sanity-check --kernel=../ukl/linux/arch/x86/boot/bzImage --initrd=./initrd
+          sudo ./qemu-sanity-check --kernel=../ukl/linux/arch/x86/boot/bzImage --initrd=./initrd -v
           
           
       
