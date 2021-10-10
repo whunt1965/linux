@@ -1,6 +1,6 @@
 # This workflow builds the UKL Kernel from Scratch and Boots it in QEMU
 
-name: Build UKL and Boot QEMU
+name: QEMU Sanity Check on UKL
 
 # Controls when the workflow will run
 on:
