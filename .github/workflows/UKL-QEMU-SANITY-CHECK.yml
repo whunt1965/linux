@@ -106,7 +106,7 @@ jobs:
       
       #Install Qemu Sanity Check 
       - name: Install Qemu Sanity Check 
-        run: git clone git://git.annexia.org/git/qemu-sanity-check.git
+        run: git clone git://git.annexia.org/qemu-sanity-check.git
       
       - name: Setup QEMU Sanity Check
         run: |
