@@ -108,6 +108,7 @@ jobs:
       - name: Install Qemu Sanity Check 
         run: git clone git://git.annexia.org/qemu-sanity-check.git
       
+      #Sets up QEMU Sanity Check Tool
       - name: Setup QEMU Sanity Check
         run: |
           cd qemu-sanity-check
@@ -115,15 +116,17 @@ jobs:
           ./configure
           make
       
+      #Runs QEMU Sanity Check Boot Test
       - name: Run QEMU Sanity Check
         run: |
           cd qemu-sanity-check
           sudo ./qemu-sanity-check --kernel=../ukl/linux/arch/x86/boot/bzImage --initrd=./initrd -v
       
-      - name: Run MakeCheck
-        run: |
-          cd qemu-sanity-check
-          sudo make check
+      #Runs All QEMU Sanity Check Tests
+#       - name: Run MakeCheck
+#         run: |
+#           cd qemu-sanity-check
+#           sudo make check
           
           
       
