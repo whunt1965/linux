@@ -121,7 +121,9 @@ jobs:
           sudo ./qemu-sanity-check --kernel=../ukl/linux/arch/x86/boot/bzImage --initrd=./initrd -v
       
       - name: Run MakeCheck
-        run: make check
+        run: |
+          cd qemu-sanity-check
+          sudo make check
           
           
       
