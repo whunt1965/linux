@@ -40,7 +40,7 @@ jobs:
       #Copy the Linux Directory into the UKL directory
       - name: Copy Linux dir into ukl dir
         run: |
-          mv /home/runner/work/linux/linux/linux ukl/
+          mv /home/ubuntu/actions-runner/_work/linux/linux/linux ukl/
           cd ukl
     
       
