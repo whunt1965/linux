@@ -48,7 +48,7 @@ jobs:
       - name: checkout config file
         uses: actions/checkout@v2
         with:
-            repository: unikernelLinux/Linux-Configs
+            repository: whunt1965/Linux-Configs
             ref: master
             token: ${{ secrets.ukl_token }}
             path: ukl/Linux-Configs
