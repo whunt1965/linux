@@ -76,7 +76,7 @@ jobs:
         uses: actions/checkout@v2
         with:
             repository: whunt1965/min-initrd
-            ref: camdenkr_branch
+            ref: terminate-qemu
             token: ${{ secrets.ukl_token }}
             path: ukl/min-initrd
 
