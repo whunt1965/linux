@@ -1,6 +1,6 @@
-# This workflow builds the UKL Kernel from Scratch and Boots it in QEMU. QEMU is forced to terminate via a reboot call
+# This workflow builds the UKL Kernel from Scratch, Boots it in QEMU, and runs unit tests
 
-name: Build UKL, Boot QEMU, and Terminate after Application runs
+name: UKL UNIT TESTS
 
 # Controls when the workflow will run
 on:
@@ -17,7 +17,7 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -34,13 +34,13 @@ jobs:
         with:
           repository: whunt1965/ukl
           token: ${{ secrets.ukl_token }}
-          ref: terminate-qemu
+          ref: camdenkr_branch
           path: ukl
     
       #Copy the Linux Directory into the UKL directory
       - name: Copy Linux dir into ukl dir
         run: |
-          mv /home/ubuntu/actions-runner/_work/linux/linux/linux ukl/
+          mv /home/runner/work/linux/linux/linux ukl/
           cd ukl
     
       
@@ -48,7 +48,7 @@ jobs:
       - name: checkout config file
         uses: actions/checkout@v2
         with:
-            repository: unikernelLinux/Linux-Configs
+            repository: whunt1965/Linux-Configs
             ref: master
             token: ${{ secrets.ukl_token }}
             path: ukl/Linux-Configs
@@ -76,7 +76,7 @@ jobs:
         uses: actions/checkout@v2
         with:
             repository: whunt1965/min-initrd
-            ref: qemu-terminate
+            ref: camdenkr_branch
             token: ${{ secrets.ukl_token }}
             path: ukl/min-initrd
 
@@ -92,21 +92,31 @@ jobs:
           cd ukl/
           make all
           
-    # Compiles UKL with Test Program
-      - name: Setup Kernel for QEMU
-        run: |
-          cd ukl/
-          make mybench_small
-          make linux-build
+#     # Compiles UKL with Test Program
+#       - name: Setup Kernel for QEMU
+#         run: |
+#           cd ukl/
+#           make mybench_small
+#           make linux-build
     
       # Install QEMU
       - name: Install QEMU
         run: sudo apt-get install qemu-kvm
       
-      #Boot QEMU
-      - name: Boot QEMU
+      #Run Boot Test
+      - name: UKL BOOT TEST
         run: |
-          cd ukl/
-          sudo make run
+          cd ukl/tests
+          ./run_boot.sh
       
-      
+      #Run Boot Test
+      - name: RUN MYBENCH SMALL TESTS
+        run: |
+          cd ukl/tests
+          ./run_mybench_small.sh
+          
+      #Run Boot Test
+      - name: RUN PTHREAD TESTS
+        run: |
+          cd ukl/tests
+          ./run_.sh
