@@ -113,5 +113,5 @@ jobs:
       - name: RUN MYBENCH SMALL TESTS
         run: |
           cd ukl/tests
-          ./rrun_mybench_small.sh
+          ./run_mybench_small.sh
       
