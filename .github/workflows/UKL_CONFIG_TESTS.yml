@@ -82,7 +82,7 @@ jobs:
             echo "CONFIG_UKL_SAME_STACK=y" >> linux_config_permute
             echo "CONFIG_UKL_USE_RET=y" >> linux_config_permute
             echo "CONFIG_UKL_USE_IST_PF=y" >> linux_config_permute
-            sudo cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
       
 
       # Runs Make All to build the UKL
@@ -128,7 +128,7 @@ jobs:
             cd ./ukl/tests
             cat linux_config > linux_config_permute
             echo "CONFIG_UKL_SAME_STACK=y" >> linux_config_permute
-            sudo cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
       
 
       # Runs Make All to build the UKL
@@ -174,7 +174,7 @@ jobs:
             cd ./ukl/tests
             cat linux_config > linux_config_permute
             echo "CONFIG_UKL_USE_RET=y" >> linux_config_permute
-            sudo cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
       
 
       # Runs Make All to build the UKL
@@ -221,7 +221,7 @@ jobs:
             cd ./ukl/tests
             cat linux_config > linux_config_permute
             echo "CONFIG_UKL_USE_IST_PF=y" >> linux_config_permute
-            sudo cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
       
 
       # Runs Make All to build the UKL
@@ -269,7 +269,7 @@ jobs:
             cat linux_config > linux_config_permute
             echo "CONFIG_UKL_SAME_STACK=y" >> linux_config_permute
             echo "CONFIG_UKL_USE_RET=y" >> linux_config_permute
-            sudo cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
 
       # Runs Make All to build the UKL
       - name: Compile UKL
@@ -316,7 +316,7 @@ jobs:
             cat linux_config > linux_config_permute
             echo "CONFIG_UKL_SAME_STACK=y" >> linux_config_permute
             echo "CONFIG_UKL_USE_IST_PF=y" >> linux_config_permute
-            sudo cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
       
 
       # Runs Make All to build the UKL
@@ -363,7 +363,7 @@ jobs:
             cat linux_config > linux_config_permute
             echo "CONFIG_UKL_USE_RET=y" >> linux_config_permute
             echo "CONFIG_UKL_USE_IST_PF=y" >> linux_config_permute
-            sudo cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
       
 
       # Runs Make All to build the UKL
