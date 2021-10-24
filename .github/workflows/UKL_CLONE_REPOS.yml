@@ -10,8 +10,11 @@ on:
 #   pull_request:
 #     branches: [ ukl-5.14 ]
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  # Allows Action to be Reused in Other Actions
+  workflow_call:
+      secrets:
+        ukl_token:
+          required: true
 
 jobs:
   # This workflow contains a single job called "build"
