@@ -12,9 +12,9 @@ on:
 
   # Allows Action to be Reused in Other Actions
   workflow_call:
-      secrets:
-        ukl_token:
-          required: true
+#       secrets:
+#         ukl_token:
+#           required: true
 
 jobs:
   # This workflow contains a single job called "build"
