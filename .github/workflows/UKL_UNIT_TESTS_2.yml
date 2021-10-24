@@ -35,22 +35,27 @@ jobs:
         uses: ./linux/.github/workflows/composite/clone
         with: 
           ukl_token: ${{ secrets.ukl_token }}
+      
+      - name: Prepare Composite for Cleanup
+        run: | 
+          mv ukl/linux .
           
-      # Runs Make All to build the UKL
-      - name: make UKL
-        run: |
-          cd ukl/
-          make all
+#       # Runs Make All to build the UKL
+#       - name: make UKL
+#         run: |
+#           cd ukl/
+#           make all
       
-      #Run Boot Test
-      - name: UKL BOOT TEST
-        run: |
-          cd ukl/tests
-          ./run_boot.sh
+#       #Run Boot Test
+#       - name: UKL BOOT TEST
+#         run: |
+#           cd ukl/tests
+#           ./run_boot.sh
       
-      #Run Boot Test
-      - name: RUN MYBENCH SMALL TESTS
-        run: |
-          cd ukl/tests
-          ./run_mybench_small.sh
+#       #Run Boot Test
+#       - name: RUN MYBENCH SMALL TESTS
+#         run: |
+#           cd ukl/tests
+#           ./run_mybench_small.sh
+
       
