@@ -1,0 +1,48 @@
+# This workflow builds the UKL Kernel from Scratch, Boots it in QEMU, and runs unit tests
+
+name: UKL UNIT TESTS
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the ukl-5.14 branch
+#   push:
+#     branches: [ ukl-5.14 ]
+#   pull_request:
+#     branches: [ ukl-5.14 ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+          
+      #Checkout UKL/Linux repo - branch 5.14      
+      - name: Clone Repos
+        uses: actions/checkout@v2
+        with:
+            path: linux
+          
+      # Runs Make All to build the UKL
+      - name: make UKL
+        run: |
+          cd ukl/
+          make all
+      
+      #Run Boot Test
+      - name: UKL BOOT TEST
+        run: |
+          cd ukl/tests
+          ./run_boot.sh
+      
+      #Run Boot Test
+      - name: RUN MYBENCH SMALL TESTS
+        run: |
+          cd ukl/tests
+          ./run_mybench_small.sh
+      
