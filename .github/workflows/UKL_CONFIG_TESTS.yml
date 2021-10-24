@@ -1,4 +1,5 @@
-# This workflow builds the UKL Kernel from Scratch, Boots it in QEMU, and runs unit tests
+# This workflow builds the UKL Kernel from Scratch with different permutations of the UKL config flags, 
+# Boots it in QEMU, and runs a single unit test.
 
 name: UKL CONFIG TESTS
 
