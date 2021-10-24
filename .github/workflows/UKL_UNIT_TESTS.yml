@@ -42,16 +42,10 @@ jobs:
           make all
       
       #Run Boot Test
-      - name: UKL BOOT TEST
+      - name: Run UKL Boot Test
         run: |
           cd ukl/tests
           ./run_boot.sh
-      
-      #Run Boot Test
-      - name: RUN MYBENCH SMALL TESTS
-        run: |
-          cd ukl/tests
-          ./run_mybench_small.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
@@ -85,7 +79,7 @@ jobs:
           make all
       
       #Run MyBench Small tests
-      - name: RUN MYBENCH SMALL TESTS
+      - name: Run MyBench Small Test
         run: |
           cd ukl/tests
           ./run_mybench_small.sh
