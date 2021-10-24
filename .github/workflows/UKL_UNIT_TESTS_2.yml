@@ -25,9 +25,10 @@ jobs:
     steps:
     
     #Clone Repos
+      - uses: actions/checkout@v2
       - uses: ./.github/workflows/composite/clone/action.yml
-#         secrets: 
-#           ukl_token: ${{ secrets.ukl_token }}
+        with: 
+          ukl_token: ${{ secrets.ukl_token }}
           
           
 #       #Checkout UKL/Linux repo - branch 5.14      
