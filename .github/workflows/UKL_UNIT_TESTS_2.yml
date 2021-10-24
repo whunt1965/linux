@@ -16,17 +16,25 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   build:
+  
+
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+    
+    #Clone Repos
+      - uses: whunt1965/linux/.github/workflows/UKL_CLONE_REPOS.yml@v1
+#         secrets: 
+#           ukl_token: ${{ secrets.ukl_token }}
           
-      #Checkout UKL/Linux repo - branch 5.14      
-      - name: Clone Repos
-        uses: actions/checkout@v2
-        with:
-            path: linux
+          
+#       #Checkout UKL/Linux repo - branch 5.14      
+#       - name: Clone Repos
+#         uses: whunt1965/linux/.github/workflows/UKL_CLONE_REPOS.yml@v1
+#         secrets:
+#             ukl_token: ${{ secrets.ukl_token }}
           
       # Runs Make All to build the UKL
       - name: make UKL
