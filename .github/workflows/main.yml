@@ -119,4 +119,4 @@ jobs:
       - name: RUN PTHREAD TESTS
         run: |
           cd ukl/tests
-          ./run_.sh
+          ./run_pthread.sh
