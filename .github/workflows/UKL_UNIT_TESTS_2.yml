@@ -24,18 +24,17 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     
-    #Clone Repos
-      - uses: actions/checkout@v2
-      - uses: ./.github/workflows/composite/clone
+    #Checkout UKL/Linux repo - branch 5.14      
+      - name: checkout Linux UKL Repo
+        uses: actions/checkout@v2
+        with:
+          path: linux
+          
+      #Clone Repos  
+      - name: Clone Repos
+        uses: ./.github/workflows/composite/clone
         with: 
           ukl_token: ${{ secrets.ukl_token }}
-          
-          
-#       #Checkout UKL/Linux repo - branch 5.14      
-#       - name: Clone Repos
-#         uses: whunt1965/linux/.github/workflows/UKL_CLONE_REPOS.yml@v1
-#         secrets:
-#             ukl_token: ${{ secrets.ukl_token }}
           
       # Runs Make All to build the UKL
       - name: make UKL
