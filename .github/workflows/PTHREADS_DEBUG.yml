@@ -15,8 +15,8 @@ on:
 
 jobs:
 
-  #My Bench Small System Tests
-  MyBench_Small_Tests:
+  #P Threads Debug
+  PThreads:
   
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
