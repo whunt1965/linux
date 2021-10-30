@@ -35,13 +35,13 @@ jobs:
         with: 
           ukl_token: ${{ secrets.ukl_token }}
       
-      #Add Same Stack Option
-      - name: Update Config Options
-        run: |
-            cd ./ukl/tests
-            cat linux_config > linux_config_permute
-            echo "CONFIG_UKL_SAME_STACK=y" >> linux_config_permute
-            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+#       #Add Same Stack Option
+#       - name: Update Config Options
+#         run: |
+#             cd ./ukl/tests
+#             cat linux_config > linux_config_permute
+#             echo "CONFIG_UKL_SAME_STACK=y" >> linux_config_permute
+#             cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
           
       # Runs Make All to build the UKL
       - name: Compile UKL
