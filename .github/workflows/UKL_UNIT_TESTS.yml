@@ -49,6 +49,7 @@ jobs:
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
 
@@ -86,6 +87,7 @@ jobs:
           
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
       
