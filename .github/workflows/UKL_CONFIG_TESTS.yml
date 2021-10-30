@@ -45,14 +45,15 @@ jobs:
           cd ukl/
           make all
       
-      #Test Config with Mybench Small Tests
-      - name: Test Config with MyBench Small Unit Tests
+      #test Config with LE Bench Sys Calls Tests
+      - name: Run LE Bench Sys Calls tests
         run: |
           cd ukl/tests
-          ./run_mybench_small.sh
+          ./run_lebench_syscalls.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
 
@@ -93,14 +94,15 @@ jobs:
           cd ukl/
           make all
       
-      #Test Config with Mybench Small Tests
-      - name: Test Config with MyBench Small Unit Tests
+      #test Config with LE Bench Sys Calls Tests
+      - name: Run LE Bench Sys Calls tests
         run: |
           cd ukl/tests
-          ./run_mybench_small.sh
+          ./run_lebench_syscalls.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
 
@@ -139,14 +141,15 @@ jobs:
           cd ukl/
           make all
       
-      #Test Config with Mybench Small Tests
-      - name: Test Config with MyBench Small Unit Tests
+      #test Config with LE Bench Sys Calls Tests
+      - name: Run LE Bench Sys Calls tests
         run: |
           cd ukl/tests
-          ./run_mybench_small.sh
+          ./run_lebench_syscalls.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
 
@@ -185,14 +188,15 @@ jobs:
           cd ukl/
           make all
       
-      #Test Config with Mybench Small Tests
-      - name: Test Config with MyBench Small Unit Tests
+      #test Config with LE Bench Sys Calls Tests
+      - name: Run LE Bench Sys Calls tests
         run: |
           cd ukl/tests
-          ./run_mybench_small.sh
+          ./run_lebench_syscalls.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
 
@@ -232,14 +236,15 @@ jobs:
           cd ukl/
           make all
       
-      #Test Config with Mybench Small Tests
-      - name: Test Config with MyBench Small Unit Tests
+      #test Config with LE Bench Sys Calls Tests
+      - name: Run LE Bench Sys Calls tests
         run: |
           cd ukl/tests
-          ./run_mybench_small.sh
+          ./run_lebench_syscalls.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
 
@@ -279,14 +284,15 @@ jobs:
           cd ukl/
           make all
       
-      #Test Config with Mybench Small Tests
-      - name: Test Config with MyBench Small Unit Tests
+      #test Config with LE Bench Sys Calls Tests
+      - name: Run LE Bench Sys Calls tests
         run: |
           cd ukl/tests
-          ./run_mybench_small.sh
+          ./run_lebench_syscalls.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
           
@@ -327,14 +333,15 @@ jobs:
           cd ukl/
           make all
       
-      #Test Config with Mybench Small Tests
-      - name: Test Config with MyBench Small Unit Tests
+      #test Config with LE Bench Sys Calls Tests
+      - name: Run LE Bench Sys Calls tests
         run: |
           cd ukl/tests
-          ./run_mybench_small.sh
+          ./run_lebench_syscalls.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
 
@@ -374,14 +381,15 @@ jobs:
           cd ukl/
           make all
       
-      #Test Config with Mybench Small Tests
-      - name: Test Config with MyBench Small Unit Tests
+      #test Config with LE Bench Sys Calls Tests
+      - name: Run LE Bench Sys Calls tests
         run: |
           cd ukl/tests
-          ./run_mybench_small.sh
+          ./run_lebench_syscalls.sh
       
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
+        if: always()
         run: | 
           mv ukl/linux .
 
