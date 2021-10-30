@@ -1,6 +1,6 @@
 # This workflow builds the UKL Kernel from Scratch, Boots it in QEMU, and runs unit tests
 
-name: UKL UNIT TESTS
+name: P Threads Debug
 
 # Controls when the workflow will run
 on:
