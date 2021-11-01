@@ -26,9 +26,16 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+#       - uses: actions/checkout@v2
+
+#       # Runs a single command using the runners shell
+#       - name: Test Virt
+#         run: grep -cw vmx /proc/cpuinfo
 
       # Runs a single command using the runners shell
       - name: Test Virt
-        run: grep -cw vmx /proc/cpuinfo
+        run: |
+          sudo apt-get update
+          sudo apt-get install qemu-kvm
+          virt-host-validate 
 
