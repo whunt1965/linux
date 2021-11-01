@@ -36,9 +36,9 @@ jobs:
       - name: Test Virt
         run: |
           sudo apt-get update
-          sudo apt-get install qemu-kvm libvirt-bin
+          sudo apt-get install qemu-kvm virt-host-validate
           
       - name: Run LibVirt Host Validate
         run: |
-          virt-host-validate 
+          sudo virt-host-validate 
 
