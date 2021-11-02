@@ -11,12 +11,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-  
-#     #Checkout UKL/Linux repo - branch 5.14      
-#     - name: checkout Linux UKL Repo
-#       uses: actions/checkout@v2
-#       with:
-#         path: linux
     
     # Checks-out Makefile from UKL repo
     - name: Checkout MakeFile
@@ -38,7 +32,7 @@ runs:
     - name: checkout config file
       uses: actions/checkout@v2
       with:
-        repository: whunt1965/Linux-Configs
+        repository: unikernelLinux/Linux-Configs
         ref: master
         token: ${{ inputs.ukl_token }}
         path: ukl/Linux-Configs
