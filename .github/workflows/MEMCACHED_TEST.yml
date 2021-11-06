@@ -77,14 +77,31 @@ jobs:
             ref: master
             token: ${{ secrets.ukl_token }}
             path: ukl/libevent
-            
-          
-#       # Runs Make All to build the UKL
-#       - name: Compile UKL
-#         run: |
-#           cd ukl/
-#           make all
-      
+     
+     #Runs Make All to build the UKL
+      - name: Compile UKL
+        run: |
+           cd ukl/
+           make all
+           
+     #Runs make libevent to build libevent 
+      - name: Compile libevent
+        run: |
+           cd ukl/
+           make libevent
+           
+      #Runs 'make memcached' to build memcached 
+      - name: Compile memcached
+        run: |
+           cd ukl/
+           make memcached      
+       
+     #Runs 'make linux-build' to build final UKL
+      - name: Compile linux-build
+        run: |
+           cd ukl/
+           make linux-build      
+       
 #       #Run Boot Test
 #       - name: Run UKL Boot Test
 #         run: |
