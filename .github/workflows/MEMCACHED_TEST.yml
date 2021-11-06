@@ -101,29 +101,49 @@ jobs:
            cd ukl/
            make linux-build      
 
-     #Start ukl memcached server
-      - name: Start ukl memcached server
-        run: |
-          cd ukl/tests
-          ./run_memcached_server.sh
+#      #Start ukl memcached server
+#       - name: Start ukl memcached server
+#         run: |
+#           cd ukl/tests
+#           ./run_memcached_server.sh
+
+#       #Run memaslap Test
+#       - name: Run Memaslap Test
+#         run: |
+#           cd ukl/tests/memcached
+#           ./run_memaslap_tests.sh
 
       #Run memaslap Test
       - name: Run Memaslap Test
         run: |
-          cd ukl/tests/memcached
+          cd ukl/tests
+          ./run_memcached_server.sh
+          cd ./memcached
           ./run_memaslap_tests.sh
+          export QEMU_PID=`pidof qemu-system-x86_64`
+          sudo kill $QEMU_PID
       
+#       #Run telnet Test
+#       - name: Run telnet Test
+#         run: |
+#           cd ukl/tests/memcached
+#           ./run_telnet_tests.sh
+
       #Run telnet Test
       - name: Run telnet Test
         run: |
-          cd ukl/tests/memcached
+          cd ukl/tests
+          ./run_memcached_server.sh
+          cd ./memcached
           ./run_telnet_tests.sh
-          
-      #stop Qemu
-      - name: Stop Qemu
-        run: |
           export QEMU_PID=`pidof qemu-system-x86_64`
           sudo kill $QEMU_PID
+          
+#       #stop Qemu
+#       - name: Stop Qemu
+#         run: |
+#           export QEMU_PID=`pidof qemu-system-x86_64`
+#           sudo kill $QEMU_PID
           
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
