@@ -55,7 +55,9 @@ jobs:
             cd ./ukl/tests/memcached
             tar xvzf libmemcached-1.0.18.tar.gz
             cp ./memflush.cc ./libmemcached-1.0.18/clients/
-
+            cd libmemcached-1.0.18
+            ./configure --enable-memaslap
+            sudo make install 
           
 #       # Runs Make All to build the UKL
 #       - name: Compile UKL
