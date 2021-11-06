@@ -45,7 +45,7 @@ jobs:
       # Turn On AfterSpace Configuration Option
       - name: Install Memcached Tools
         run: |
-            sudo apt-get automake libtool libevent-dev
+            sudo apt-get install automake libtool libevent-dev
       
       #To-Do - Installations
       
