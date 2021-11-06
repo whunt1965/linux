@@ -59,6 +59,25 @@ jobs:
             cd libmemcached-1.0.18
             ./configure --enable-memaslap
             sudo make install 
+            
+      #Checkout memcached 
+      - name: checkout memcached repo
+        uses: actions/checkout@v2
+        with:
+            repository: unikernelLinux/memcached
+            ref: master
+            token: ${{ secrets.ukl_token }}
+            path: ukl/memcached
+      
+      #Checkout libevent 
+      - name: checkout libevent repo
+        uses: actions/checkout@v2
+        with:
+            repository: unikernelLinux/libevent
+            ref: master
+            token: ${{ secrets.ukl_token }}
+            path: ukl/libevent
+            
           
 #       # Runs Make All to build the UKL
 #       - name: Compile UKL
