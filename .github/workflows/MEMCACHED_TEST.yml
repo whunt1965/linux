@@ -35,21 +35,20 @@ jobs:
         with: 
           ukl_token: ${{ secrets.ukl_token }}
           
-#       # Turn On AfterSpace Configuration Option
-#       - name: Update Config Options
-#         run: |
-#             cd ./ukl/tests
-#             cat linux_config > linux_config_permute
-#             cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom
+        # Turn On AfterSpace Configuration Option
+      - name: Update Config Options
+        run: |
+            cd ./ukl/tests
+            cat linux_config > linux_config_permute
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom
       
-      # Turn On AfterSpace Configuration Option
+      # Install memcached tools 
       - name: Install Memcached Tools
         run: |
             sudo apt-get install automake libtool libevent-dev telnet
       
-      #To-Do - Installations
       
-            # Turn On AfterSpace Configuration Option
+      # Installing libmemcached
       - name: Install libmemcached
         run: |
             cd ./ukl/tests/memcached
@@ -101,13 +100,31 @@ jobs:
         run: |
            cd ukl/
            make linux-build      
-       
-#       #Run Boot Test
-#       - name: Run UKL Boot Test
-#         run: |
-#           cd ukl/tests
-#           ./run_boot.sh
+
+     #Start ukl memcached server
+      - name: Start ukl memcached server
+        run: |
+          cd ukl/tests
+          ./run_memcached_server.sh
+
+      #Run memaslap Test
+      - name: Run Memaslap Test
+        run: |
+          cd ukl/tests/memcached
+          ./run_memaslap_tests.sh
       
+      #Run telnet Test
+      - name: Run telnet Test
+        run: |
+          cd ukl/tests/memcached
+          ./run_telnet_tests.sh
+          
+      #stop Qemu
+      - name: Stop Qemu
+        run: |
+          export QEMU_PID=`pidof qemu-system-x86_64`
+          sudo kill $QEMU_PID
+          
       #Move Linux back to Parent Directory to enable default action cleanup
       - name: Prepare for Cleanup
         if: always()
