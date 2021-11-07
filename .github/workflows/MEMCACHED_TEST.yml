@@ -113,15 +113,16 @@ jobs:
 #           cd ukl/tests/memcached
 #           ./run_memaslap_tests.sh
 
-#       #Run memaslap Test
-#       - name: Run Memaslap Test
-#         run: |
-#           cd ukl/tests
-#           ./run_memcached_server.sh
-#           cd ./memcached
-#           ./run_memaslap_tests.sh
-#           export QEMU_PID=`pidof qemu-system-x86_64`
-#           sudo kill $QEMU_PID
+      #Run memaslap Test
+      - name: Run Memaslap Test
+        run: |
+          cd ukl/tests
+          ./run_memcached_server.sh
+          sleep 20
+          cd ./memcached
+          ./run_memaslap_tests.sh
+          export QEMU_PID=`pidof qemu-system-x86_64`
+          sudo kill $QEMU_PID
       
 #       #Run telnet Test
 #       - name: Run telnet Test
