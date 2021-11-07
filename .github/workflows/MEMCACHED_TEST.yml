@@ -134,6 +134,7 @@ jobs:
         run: |
           cd ukl/tests
           ./run_memcached_server.sh
+          sleep 10
           cd ./memcached
           ./run_telnet_tests.sh
           export QEMU_PID=`pidof qemu-system-x86_64`
