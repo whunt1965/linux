@@ -32,13 +32,17 @@ jobs:
 #       - name: Test Virt
 #         run: grep -cw vmx /proc/cpuinfo
 
-      # Runs a single command using the runners shell
-      - name: Test Virt
-        run: |
-          sudo apt-get update
-          sudo apt-get install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virtinst virt-manager
+#       # Runs a single command using the runners shell
+#       - name: Test Virt
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virtinst virt-manager
           
-      - name: Run LibVirt Host Validate
-        run: |
-          sudo virt-host-validate 
+#       - name: Run LibVirt Host Validate
+#         run: |
+#           sudo virt-host-validate 
 
+      # Runs a single command using the runners shell
+      - name: Test Network
+        run: |
+          ip a
