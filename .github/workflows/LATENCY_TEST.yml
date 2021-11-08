@@ -59,7 +59,5 @@ jobs:
         if: always()
         run: | 
           mv ukl/linux .
-          cd ../
-          rm -rf *
 
  
