@@ -1,6 +1,6 @@
-# This workflow builds the UKL Kernel from Scratch, Boots it in QEMU, and runs unit tests
+# This workflow clones all dependency repos required to run UKL Unit Tests
 
-name: "UKL CLONE REPOS 2"
+name: "UKL CLONE REPOS"
 description: "Clones all UKL Dependency Repos"
 
 inputs:
