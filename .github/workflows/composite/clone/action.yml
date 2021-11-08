@@ -25,7 +25,10 @@ runs:
     - name: Copy Linux dir into ukl dir
       shell: bash
       run: |
-        mv /home/runner/work/linux/linux/linux ukl/
+        pwd
+        ls
+        export BASE_DIR=`pwd`
+        mv $BASE_DIR/linux ukl/
         cd ukl
     
     #Checkout Linux-Configs repo
