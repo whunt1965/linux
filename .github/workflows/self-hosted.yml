@@ -37,3 +37,4 @@ jobs:
           touch hello.txt
           pwd
           ls
+          rm -rf *
