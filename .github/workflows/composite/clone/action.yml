@@ -71,6 +71,6 @@ runs:
     - name: Update and install package requirements
       shell: bash
       run: |
-        sudo apt-get update
-        sudo apt-get install git build-essential flex bison supermin libelf-dev libssl-dev texinfo libgmp3-dev libmpc-dev libmpfr-dev qemu-kvm
+        sudo apt-get -y update
+        sudo apt-get -y install git build-essential flex bison supermin libelf-dev libssl-dev texinfo libgmp3-dev libmpc-dev libmpfr-dev qemu-kvm
       
