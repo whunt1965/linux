@@ -22,6 +22,10 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Clean Up Old Files
+        run: |
+          cd ../
+          rm -rf *
           
       #Checkout UKL/Linux repo - branch 5.14      
       - name: checkout Linux UKL Repo
