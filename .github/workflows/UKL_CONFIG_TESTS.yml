@@ -6,10 +6,12 @@ name: UKL CONFIG TESTS
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the ukl-5.14 branch
-#   push:
-#     branches: [ ukl-5.14 ]
-#   pull_request:
-#     branches: [ ukl-5.14 ]
+  push:
+    branches: [ ukl-5.14 ]
+  pull_request:
+    branches: [ ukl-5.14 ]
+  
+  #Schedules run at 01:30 UTC
   schedule:
     - cron:  '30 1 * * *'
 
