@@ -9,6 +9,10 @@ on:
     branches: [ ukl-5.14 ]
   pull_request:
     branches: [ ukl-5.14 ]
+    
+    #Schedules run at 01:30 UTC
+  schedule:
+    - cron:  '30 1 * * *'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
