@@ -19,7 +19,7 @@ jobs:
   Latency-Test:
   
     # The type of runner that the job will run on
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Clean Up Old Files
