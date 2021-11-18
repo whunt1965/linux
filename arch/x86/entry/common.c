@@ -70,6 +70,78 @@ static __always_inline bool do_syscall_x32(struct pt_regs *regs, int nr)
 	return false;
 }
 
+inline int get_in_user (void){
+	/*
+	 * 0 = Non UKL thread
+	 * 1 = UKL thread - in kernel code
+	 * 2 = UKL thread - in user code
+	 */
+	return current->in_user;
+}
+inline void enter_user (void){
+	current->in_user = 2;
+}
+inline void exit_user (void){
+	current->in_user = 1;
+}
+
+#ifdef CONFIG_UKL_SAME_STACK
+void find_user_vma(unsigned long addr){
+	struct vm_area_struct *usv;
+	struct task_struct *tsk;
+	struct mm_struct *mm;
+
+	tsk = current;
+	mm = tsk->mm;
+
+	if (unlikely(!mmap_read_trylock(mm))) {
+		mmap_read_lock(mm);
+	}
+
+	usv = find_vma(mm, addr);
+
+	mmap_read_unlock(mm);
+
+	if(usv == NULL){
+		printk("Error: Could not find user stack vma!");
+	}
+	tsk->user_stack_vma = usv;
+}
+#endif
+
+void ukl_set_bypass_limit(int val){
+        current->ukl_bypass_limit = val;
+        printk("Setting bypass limit to %d\n", val);
+}
+
+void ukl_set_bypass_syscall(int val){
+        current->ukl_bypass_syscall = val;
+        if (current->ukl_bypass_limit == 0){
+                current->ukl_bypass_limit = 50;
+                printk("Setting bypass limit to 50 (DEFAULT)\n");
+        }
+}
+
+int ukl_get_bypass_syscall(void){
+        struct thread_info *ti;
+        int ret = current->ukl_bypass_syscall;
+
+        if (ret == 0)
+                return ret;
+
+        ti = current_thread_info();
+        if (READ_ONCE(ti->flags) & _TIF_SIGPENDING)
+                return 0;
+
+        current->ukl_bypass_current++;
+        if (current->ukl_bypass_current >= current->ukl_bypass_limit){
+                current->ukl_bypass_current = 0;
+                ret = 0;
+        }
+
+        return ret;
+}
+
 __visible noinstr void do_syscall_64(struct pt_regs *regs, int nr)
 {
 	add_random_kstack_offset();

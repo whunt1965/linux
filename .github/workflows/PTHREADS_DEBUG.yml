@@ -1,0 +1,63 @@
+# This workflow builds the UKL Kernel from Scratch, Boots it in QEMU, and runs unit tests
+
+name: P Threads Debug
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the ukl-5.14 branch
+#   push:
+#     branches: [ ukl-5.14 ]
+#   pull_request:
+#     branches: [ ukl-5.14 ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+
+  #P Threads Debug
+  PThreads:
+  
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    steps:
+          
+      #Checkout UKL/Linux repo - branch 5.14      
+      - name: checkout Linux UKL Repo
+        uses: actions/checkout@v2
+        with:
+            path: linux
+    
+      #Clone Repos  
+      - name: Clone Dependency Repos
+        uses: ./linux/.github/workflows/composite/clone
+        with: 
+          ukl_token: ${{ secrets.ukl_token }}
+      
+#       #Add Same Stack Option
+#       - name: Update Config Options
+#         run: |
+#             cd ./ukl/tests
+#             cat linux_config > linux_config_permute
+#             echo "CONFIG_UKL_SAME_STACK=y" >> linux_config_permute
+#             cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom_ukl_base_config
+          
+      # Runs Make All to build the UKL
+      - name: Compile UKL
+        run: |
+          cd ukl/
+          make all
+      
+      #Run MyBench Small tests
+      - name: Run PThreads test
+        run: |
+          cd ukl/tests
+          ./run_pthread.sh
+          
+      #Move Linux back to Parent Directory to enable default action cleanup
+      - name: Prepare for Cleanup
+        if: always()
+        run: | 
+          mv ukl/linux .
+      

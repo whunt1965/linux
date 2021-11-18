@@ -1,0 +1,158 @@
+# This workflow builds the UKL Kernel from Scratch, Boots it in QEMU, and runs unit tests
+
+name: MEMCACHED_TEST
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the ukl-5.14 branch
+#   push:
+#     branches: [ ukl-5.14 ]
+#   pull_request:
+#     branches: [ ukl-5.14 ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+
+  #Boot Test Job
+  Memcached:
+  
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    steps:
+          
+      #Checkout UKL/Linux repo - branch 5.14      
+      - name: checkout Linux UKL Repo
+        uses: actions/checkout@v2
+        with:
+            path: linux
+    
+      #Clone Repos  
+      - name: Clone Dependency Repos
+        uses: ./linux/.github/workflows/composite/clone
+        with: 
+          ukl_token: ${{ secrets.ukl_token }}
+          
+        # Turn On AfterSpace Configuration Option
+      - name: Update Config Options
+        run: |
+            cd ./ukl/tests
+            cat linux_config > linux_config_permute
+            cp linux_config_permute ../Linux-Configs/ukl/golden_config-5.7-broadcom
+      
+      # Install memcached tools 
+      - name: Install Memcached Tools
+        run: |
+            sudo apt-get install automake libtool libevent-dev telnet
+      
+      
+      # Installing libmemcached
+      - name: Install libmemcached
+        run: |
+            cd ./ukl/tests/memcached
+            tar xvzf libmemcached-1.0.18.tar.gz
+            cp ./memflush.cc ./libmemcached-1.0.18/clients/
+            cp ./Makefile.in ./libmemcached-1.0.18
+            cd libmemcached-1.0.18
+            ./configure --enable-memaslap
+            sudo make install 
+            
+      #Checkout memcached 
+      - name: checkout memcached repo
+        uses: actions/checkout@v2
+        with:
+            repository: unikernelLinux/memcached
+            ref: ukl
+            token: ${{ secrets.ukl_token }}
+            path: ukl/memcached
+      
+      #Checkout libevent 
+      - name: checkout libevent repo
+        uses: actions/checkout@v2
+        with:
+            repository: unikernelLinux/libevent
+            ref: ukl
+            token: ${{ secrets.ukl_token }}
+            path: ukl/libevent
+     
+     #Runs Make All to build the UKL
+      - name: Compile UKL
+        run: |
+           cd ukl/
+           make all
+           
+     #Runs make libevent to build libevent 
+      - name: Compile libevent
+        run: |
+           cd ukl/
+           make libevent
+           
+      #Runs 'make memcached' to build memcached 
+      - name: Compile memcached
+        run: |
+           cd ukl/
+           make memcached      
+       
+     #Runs 'make linux-build' to build final UKL
+      - name: Compile linux-build
+        run: |
+           cd ukl/
+           make linux-build      
+
+     #Start ukl memcached server
+      - name: Start ukl memcached server
+        run: |
+          cd ukl/tests
+          ./run_memcached_server.sh
+          sleep 30
+
+      #Run memaslap Test
+      - name: Run Memaslap Test
+        run: |
+          cd ukl/tests/memcached
+          ./run_memaslap_tests.sh
+
+#       #Run memaslap Test
+#       - name: Run Memaslap Test
+#         run: |
+#           cd ukl/tests
+#           ./run_memcached_server.sh
+#           sleep 20
+#           cd ./memcached
+#           ./run_memaslap_tests.sh
+#           export QEMU_PID=`pidof qemu-system-x86_64`
+#           sudo kill $QEMU_PID
+      
+      #Run telnet Test
+      - name: Run telnet Test
+        run: |
+          cd ukl/tests/memcached
+          ./run_telnet_tests.sh
+
+#       #Run telnet Test
+#       - name: Run telnet Test
+#         run: |
+#           cd ukl/tests
+#           ./run_memcached_server.sh
+#           sleep 20
+#           cd ./memcached
+#           ./run_telnet_tests.sh
+#           export QEMU_PID=`pidof qemu-system-x86_64`
+#           sudo kill $QEMU_PID
+          
+      #stop Qemu
+      - name: Stop Qemu
+        run: |
+          export QEMU_PID=`pidof qemu-system-x86_64`
+          sudo kill $QEMU_PID
+          
+      #Move Linux back to Parent Directory to enable default action cleanup
+      - name: Prepare for Cleanup
+        if: always()
+        run: | 
+          mv ukl/linux .
+
+
+      

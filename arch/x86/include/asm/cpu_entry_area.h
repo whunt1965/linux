@@ -11,6 +11,25 @@
 #ifdef CONFIG_X86_64
 
 /* Macro to enforce the same ordering and stack sizes */
+#ifdef CONFIG_UKL_USE_IST_PF
+#define ESTACKS_MEMBERS(guardsize, optional_stack_size)		\
+	char	DF_stack_guard[guardsize];			\
+	char	DF_stack[EXCEPTION_STKSZ];			\
+	char	NMI_stack_guard[guardsize];			\
+	char	NMI_stack[EXCEPTION_STKSZ];			\
+	char	DB_stack_guard[guardsize];			\
+	char	DB_stack[EXCEPTION_STKSZ];			\
+	char	MCE_stack_guard[guardsize];			\
+	char	MCE_stack[EXCEPTION_STKSZ];			\
+	char	VC_stack_guard[guardsize];			\
+	char	VC_stack[optional_stack_size];			\
+	char	VC2_stack_guard[guardsize];			\
+	char	VC2_stack[optional_stack_size];			\
+	char	PF_stack_guard[guardsize];			\
+	char	PF_stack[EXCEPTION_STKSZ];			\
+	char	IST_top_guard[guardsize];			\
+
+#else
 #define ESTACKS_MEMBERS(guardsize, optional_stack_size)		\
 	char	DF_stack_guard[guardsize];			\
 	char	DF_stack[EXCEPTION_STKSZ];			\
@@ -26,6 +45,7 @@
 	char	VC2_stack[optional_stack_size];			\
 	char	IST_top_guard[guardsize];			\
 
+#endif
 /* The exception stacks' physical storage. No guard pages required */
 struct exception_stacks {
 	ESTACKS_MEMBERS(0, 0)
@@ -46,6 +66,9 @@ enum exception_stack_ordering {
 	ESTACK_MCE,
 	ESTACK_VC,
 	ESTACK_VC2,
+#ifdef CONFIG_UKL_USE_IST_PF
+	ESTACK_PF,
+#endif
 	N_EXCEPTION_STACKS
 };
 

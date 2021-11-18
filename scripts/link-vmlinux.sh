@@ -75,6 +75,7 @@ modpost_link()
 
 	objects="--whole-archive				\
 		${KBUILD_VMLINUX_OBJS}				\
+		../UKL.a                                        \
 		--no-whole-archive				\
 		--start-group					\
 		${KBUILD_VMLINUX_LIBS}				\
@@ -180,6 +181,7 @@ vmlinux_link()
 		else
 			objects="--whole-archive		\
 				${KBUILD_VMLINUX_OBJS}		\
+				../UKL.a                        \
 				--no-whole-archive		\
 				--start-group			\
 				${KBUILD_VMLINUX_LIBS}		\

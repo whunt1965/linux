@@ -66,10 +66,13 @@ static inline bool pagefault_disabled(void);
  * Return: true (nonzero) if the memory block may be valid, false (zero)
  * if it is definitely invalid.
  */
-#define access_ok(addr, size)					\
+
+#define access_ok(addr, size)						\
 ({									\
 	WARN_ON_IN_IRQ();						\
-	likely(!__range_not_ok(addr, size, TASK_SIZE_MAX));		\
+ 	(get_in_user() == 0 ?						\
+	likely(!__range_not_ok(addr, size, TASK_SIZE_MAX))		\
+	: 1);								\
 })
 
 extern int __get_user_1(void);

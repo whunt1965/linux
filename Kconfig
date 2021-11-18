@@ -30,3 +30,37 @@ source "lib/Kconfig"
 source "lib/Kconfig.debug"
 
 source "Documentation/Kconfig"
+
+config UNIKERNEL_LINUX
+       bool "Unikernel Linux"
+       def_bool y
+       help
+        Turn on UKL mode
+
+config UKL_SAME_STACK
+	bool "UKL Same Stack"
+	depends on UNIKERNEL_LINUX
+	help
+ 	Use user stack when switching to kernel code i.e., dont switch to kernel stack when entering the kernel
+
+config UKL_USE_RET
+        bool "UKL user ret instead of iret"
+        depends on UNIKERNEL_LINUX
+        help 
+        Use ret instead of iret when returning from kernel after interrupts and faults
+
+config UKL_USE_IST_PF
+       bool "UKL use IST for PF instead of DF"
+       depends on UNIKERNEL_LINUX
+       help 
+        Choose this option so that all PFs are handled on a special exception stack from IST. 
+        If this option is not chosen, PFs are not handled specially. Only the case where, due 
+        to lack of stack, PFs turn into double faults, handle it specially on a double fault stack.
+
+config UKL_CREATE_AFTERSPACE
+        bool "UKL create an afterspace to run after UKL finishes"
+        def_bool y
+        depends on UNIKERNEL_LINUX
+        help
+        You can kill init before ukl runs and then create an afterspace to get results etc out.
+

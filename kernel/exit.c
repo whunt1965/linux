@@ -724,10 +724,20 @@ static void check_stack_usage(void)
 static inline void check_stack_usage(void) {}
 #endif
 
+#ifdef CONFIG_UKL_CREATE_AFTERSPACE
+extern struct completion ukl_done;
+#endif
+
 void __noreturn do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
+
+#ifdef CONFIG_UKL_CREATE_AFTERSPACE
+	if (unlikely(is_global_init(tsk))){
+		complete(&ukl_done);
+	}
+#endif
 
 	/*
 	 * We can get here from a kernel oops, sometimes with preemption off.
@@ -790,9 +800,15 @@ void __noreturn do_exit(long code)
 		 * If the last thread of global init has exited, panic
 		 * immediately to get a useable coredump.
 		 */
-		if (unlikely(is_global_init(tsk)))
+		if (unlikely(is_global_init(tsk))){
+			printk("UKL exiting\n");
+			while(1){
+				current->__state = TASK_INTERRUPTIBLE;
+				schedule();
+			}
 			panic("Attempted to kill init! exitcode=0x%08x\n",
 				tsk->signal->group_exit_code ?: (int)code);
+		}
 
 #ifdef CONFIG_POSIX_TIMERS
 		hrtimer_cancel(&tsk->signal->real_timer);

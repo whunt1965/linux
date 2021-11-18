@@ -38,7 +38,7 @@ typedef struct {
 #endif
 
 #define uaccess_kernel()		(false)
-#define user_addr_max()			(TASK_SIZE_MAX)
+#define user_addr_max() (get_in_user() == 0 ? TASK_SIZE_MAX : -1ul)
 
 static inline mm_segment_t force_uaccess_begin(void)
 {

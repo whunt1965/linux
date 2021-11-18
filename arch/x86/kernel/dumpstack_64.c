@@ -26,11 +26,18 @@ static const char * const exception_stack_names[] = {
 		[ ESTACK_MCE	]	= "#MC",
 		[ ESTACK_VC	]	= "#VC",
 		[ ESTACK_VC2	]	= "#VC2",
+#ifdef CONFIG_UKL_USE_IST_PF
+		[ ESTACK_PF	]	= "#PF",
+#endif
 };
 
 const char *stack_type_name(enum stack_type type)
 {
+#ifdef CONFIG_UKL_USE_IST_PF
+        BUILD_BUG_ON(N_EXCEPTION_STACKS != 7);
+#else
 	BUILD_BUG_ON(N_EXCEPTION_STACKS != 6);
+#endif
 
 	if (type == STACK_TYPE_IRQ)
 		return "IRQ";
@@ -83,6 +90,9 @@ struct estack_pages estack_pages[CEA_ESTACK_PAGES] ____cacheline_aligned = {
 	EPAGERANGE(MCE),
 	EPAGERANGE(VC),
 	EPAGERANGE(VC2),
+#ifdef CONFIG_UKL_USE_IST_PF
+	EPAGERANGE(PF),
+#endif
 };
 
 static __always_inline bool in_exception_stack(unsigned long *stack, struct stack_info *info)
@@ -92,8 +102,11 @@ static __always_inline bool in_exception_stack(unsigned long *stack, struct stac
 	struct pt_regs *regs;
 	unsigned int k;
 
+#ifdef CONFIG_UKL_USE_IST_PF
+	BUILD_BUG_ON(N_EXCEPTION_STACKS != 7);
+#else
 	BUILD_BUG_ON(N_EXCEPTION_STACKS != 6);
-
+#endif
 	begin = (unsigned long)__this_cpu_read(cea_exception_stacks);
 	/*
 	 * Handle the case where stack trace is collected _before_

@@ -691,7 +691,7 @@ static void flush_tlb_func(void *info)
 			return;
 	}
 
-	if (unlikely(loaded_mm == &init_mm))
+	if (get_in_user() == 0 && unlikely(loaded_mm == &init_mm))
 		return;
 
 	VM_WARN_ON(this_cpu_read(cpu_tlbstate.ctxs[loaded_mm_asid].ctx_id) !=

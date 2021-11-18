@@ -133,6 +133,9 @@ static __always_inline int user_mode(struct pt_regs *regs)
 #ifdef CONFIG_X86_32
 	return ((regs->cs & SEGMENT_RPL_MASK) | (regs->flags & X86_VM_MASK)) >= USER_RPL;
 #else
+	if(regs->cs == 0xC3){ // Case of UKL user
+		return 1;
+	}
 	return !!(regs->cs & 3);
 #endif
 }

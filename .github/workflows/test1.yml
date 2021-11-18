@@ -1,0 +1,56 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Test-1-for-UKL-CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the ukl branch
+  push:
+    branches: [ ukl-5.14 ]
+  pull_request:
+    branches: [ ukl-5.14 ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    
+      # Checks-out Makefile from UKL repo
+      - name: Checkout MakeFile
+        uses: actions/checkout@v2
+        with:
+          repository: whunt1965/ukl
+          token: ${{ secrets.ukl_token }}
+      
+      #Checkout Linux-Configs repo
+      - name: checkout config file
+        uses: actions/checkout@v2
+        with:
+            repository: unikernelLinux/Linux-Configs
+            ref: master
+            token: ${{ secrets.ukl_token }}
+            path: Linux-Configs
+            
+      #Checkout UKL Linux Main repo      
+      - name: checkout Linux UKL Repo
+        uses: actions/checkout@v2
+        with:
+#             repository: whunt1965/linux
+            ref: ukl-5.14 
+            path: linux
+
+      # Installs required packages
+      - name: Install requirements
+        run: sudo apt-get install git build-essential flex bison supermin
+
+      # Makes the linux directory
+      - name: Build linux dir
+        run: make linux-dir
